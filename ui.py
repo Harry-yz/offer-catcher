@@ -6,6 +6,7 @@ Streamlit UI组件封装
 
 import streamlit as st
 import json
+import re
 from typing import List, Dict, Any, Optional
 from models import Resume, JobDescription, MatchResult, InterviewPrep
 
@@ -305,3 +306,48 @@ def run_match():
         results.sort(key=lambda x: x.overall_score, reverse=True)
         st.session_state.match_results = results
         s.update(label="✅ 匹配完成", state="complete")
+
+def generate_follow_up_questions(question: str, answer: str) -> List[str]:
+    """根据回答生成追问"""
+    follow_ups = []
+    
+    # 检查是否有量化数据
+    numbers = re.findall(r'\d+\.?\d*%?', answer)
+    if numbers:
+        follow_ups.append(f"你提到了{numbers[0]}，能详细说明是如何达到这个成果的吗？")
+    
+    # 检查是否提到技术栈
+    tech_keywords = ['Python', 'Java', 'React', 'Django', 'SQL', 'Redis']
+    for tech in tech_keywords:
+        if tech.lower() in answer.lower():
+            follow_ups.append(f"能详细说说你在{tech}方面的经验吗？")
+    
+    # 检查是否提到团队合作
+    if '团队' in answer or '合作' in answer:
+        follow_ups.append("在团队协作中，你遇到过什么挑战？是如何解决的？")
+    
+    # 默认追问
+    if not follow_ups:
+        follow_ups.append("能再详细描述一下这个过程吗？")
+    
+    return follow_ups[:3]  # 最多返回3个追问
+
+def evaluate_answer_quality(answer: str) -> int:
+    """评估回答质量"""
+    score = 60  # 基础分
+    
+    # 检查是否有量化数据
+    numbers = re.findall(r'\d+\.?\d*%?', answer)
+    if numbers:
+        score += 10 * len(numbers)
+    
+    # 检查是否有具体技术
+    tech_keywords = ['Python', 'Java', 'React', 'Django', 'SQL', 'Redis', 'Docker']
+    tech_count = sum(1 for tech in tech_keywords if tech.lower() in answer.lower())
+    score += tech_count * 5
+    
+    # 检查长度
+    if len(answer) > 100:
+        score += 10
+    
+    return min(score, 100)
