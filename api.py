@@ -4,7 +4,7 @@ import re
 import base64
 import requests
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 
 logger = logging.getLogger(__name__)
 
@@ -109,3 +109,39 @@ def pdf_to_text(file_bytes: bytes) -> str:
     except Exception as e:
         logger.error(f"PDF解析失败: {e}")
         return ""
+
+def calculate_skill_match(resume_skills: List[str], jd_skills: List[str]) -> int:
+    """计算技能匹配度"""
+    if not jd_skills:
+        return 100
+    
+    resume_skills_lower = [s.lower() for s in resume_skills]
+    jd_skills_lower = [s.lower() for s in jd_skills]
+    
+    matched = 0
+    for skill in jd_skills_lower:
+        for resume_skill in resume_skills_lower:
+            if skill in resume_skill or resume_skill in skill:
+                matched += 1
+                break
+    
+    return int((matched / len(jd_skills)) * 100)
+
+def calculate_experience_match(resume_text: str, jd_text: str) -> int:
+    """计算经验匹配度"""
+    # 提取年限要求
+    jd_years = re.findall(r'(\d+).*?年', jd_text)
+    resume_years = re.findall(r'(\d+).*?年', resume_text)
+    
+    if not jd_years or not resume_years:
+        return 70  # 默认分数
+    
+    jd_min = int(jd_years[0])
+    resume_exp = int(resume_years[0])
+    
+    if resume_exp >= jd_min:
+        return 100
+    elif resume_exp >= jd_min * 0.8:
+        return 80
+    else:
+        return 60
