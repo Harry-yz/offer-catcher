@@ -393,3 +393,82 @@ def evaluate_answer_quality(answer: str) -> int:
         score += 10
     
     return min(score, 100)
+
+def render_progress_bar(value: int, max_value: int = 100) -> str:
+    """渲染进度条"""
+    percentage = int((value / max_value) * 100)
+    color = "#10B981" if percentage >= 80 else "#F59E0B" if percentage >= 60 else "#EF4444"
+    
+    return f'''
+    <div style="background: #334155; border-radius: 6px; height: 8px; overflow: hidden;">
+        <div style="height: 100%; border-radius: 6px; width: {percentage}%; background: {color}; transition: width 0.3s;"></div>
+    </div>
+    <div style="text-align: right; font-size: 0.8rem; color: {color}; margin-top: 4px;">{percentage}%</div>
+    '''
+
+def render_skill_tags(skills: List[str], max_show: int = 5) -> str:
+    """渲染技能标签"""
+    if not skills:
+        return ""
+    
+    tags_html = ""
+    for i, skill in enumerate(skills[:max_show]):
+        tags_html += f'<span class="tag-match" style="margin: 2px;">✓ {skill}</span>'
+    
+    if len(skills) > max_show:
+        tags_html += f'<span style="color: #64748B; font-size: 0.85rem;"> +{len(skills) - max_show} more</span>'
+    
+    return tags_html
+
+def render_score_card(score: int, label: str) -> str:
+    """渲染分数卡片"""
+    color = "#10B981" if score >= 80 else "#F59E0B" if score >= 60 else "#EF4444"
+    
+    return f'''
+    <div class="card" style="text-align: center; padding: 1.5rem;">
+        <div class="score-big" style="color: {color}; font-size: 3rem;">{score}</div>
+        <div style="color: {color}; font-size: 1rem; margin-top: 0.5rem;">{label}</div>
+    </div>
+    '''
+
+def render_match_summary(match_result: dict) -> str:
+    """渲染匹配摘要"""
+    score = match_result.get('overall_score', 0)
+    matched = match_result.get('matched', [])
+    missing = match_result.get('missing', [])
+    
+    color = "#10B981" if score >= 80 else "#F59E0B" if score >= 60 else "#EF4444"
+    label = "高度匹配" if score >= 90 else "较好匹配" if score >= 70 else "一般匹配" if score >= 50 else "匹配度低"
+    
+    html = f'''
+    <div class="card">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="score-big" style="color: {color};">{score}</div>
+            <div>
+                <div style="color: {color}; font-weight: 600;">{label}</div>
+                <div style="color: #64748B; font-size: 0.9rem;">匹配度评分</div>
+            </div>
+        </div>
+        <div style="margin-top: 1rem;">
+            {render_progress_bar(score)}
+        </div>
+    '''
+    
+    if matched:
+        html += f'''
+        <div style="margin-top: 1rem;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">匹配技能:</div>
+            {render_skill_tags([m.get('requirement', '') for m in matched])}
+        </div>
+        '''
+    
+    if missing:
+        html += f'''
+        <div style="margin-top: 1rem;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">缺失技能:</div>
+            {render_skill_tags([m.get('requirement', '') for m in missing], 3)}
+        </div>
+        '''
+    
+    html += '</div>'
+    return html

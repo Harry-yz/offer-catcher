@@ -5,7 +5,7 @@ Offer Catcher (Offer捕手) V3
 """
 
 import streamlit as st
-from ui import apply_css, render_portal, render_parsed, render_match_results, _reset, run_parse, run_match
+from ui import apply_css, render_portal, render_parsed, render_match_results, render_match_summary, _reset, run_parse, run_match
 
 # ============================================================
 # Session State
@@ -24,6 +24,42 @@ def init_state():
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
+
+# ============================================================
+# 增强的匹配结果渲染
+# ============================================================
+def render_match_results_enhanced(results, mode: str):
+    """显示增强的匹配结果"""
+    for i, r in enumerate(results):
+        match_result = {
+            'overall_score': r.overall_score,
+            'matched': [{'requirement': m.requirement} for m in r.matched],
+            'missing': [{'requirement': m.requirement} for m in r.missing]
+        }
+        
+        st.markdown(render_match_summary(match_result), unsafe_allow_html=True)
+        
+        # 添加详细信息展开
+        with st.expander(f"查看详细分析 - {r.company}"):
+            st.markdown(f"**公司:** {r.company}")
+            st.markdown(f"**职位:** {r.position}")
+            st.markdown(f"**地点:** {r.location}")
+            st.markdown(f"**分析:** {r.analysis}")
+            
+            if r.optimization:
+                st.markdown("**优化建议:**")
+                for opt in r.optimization:
+                    st.markdown(f"- {opt.get('original', '')} → {opt.get('suggested', '')}")
+        
+        btn_label = "🛡️ 面试准备" if mode == "shield" else "⚔️ 验证出题"
+        if st.button(btn_label, key=f"prep_{mode}_{i}", use_container_width=True):
+            st.session_state.selected_idx = i
+            st.session_state.page = "prep"
+            st.session_state.prep_result = None
+            st.session_state.chat_history = []
+            st.rerun()
+        
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
 # ============================================================
 # 页面: 求职者工作台
@@ -59,7 +95,7 @@ def page_seeker():
 
     with col_r:
         if st.session_state.match_results:
-            render_match_results(st.session_state.match_results, "shield")
+            render_match_results_enhanced(st.session_state.match_results, "shield")
         elif st.session_state.parsed_resume:
             render_parsed(st.session_state.parsed_resume, st.session_state.parsed_jds)
         else:
@@ -102,7 +138,7 @@ def page_interviewer():
 
     with col_r:
         if st.session_state.match_results:
-            render_match_results(st.session_state.match_results, "interviewer")
+            render_match_results_enhanced(st.session_state.match_results, "interviewer")
         elif st.session_state.parsed_resume:
             render_parsed(st.session_state.parsed_resume, st.session_state.parsed_jds)
         else:
