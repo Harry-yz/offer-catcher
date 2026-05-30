@@ -1,10 +1,50 @@
 ﻿# parser.py
 import json
 import logging
-from typing import Dict, Any, Optional
+import re
+from typing import Dict, Any, Optional, List
 from models import Resume, JobDescription, Education, Project, Requirements, Requirement
 
 logger = logging.getLogger(__name__)
+
+def extract_skills_from_text(text: str) -> List[str]:
+    """从文本中提取技能"""
+    skill_patterns = [
+        r'Python', r'Java', r'SQL', r'JavaScript', r'TypeScript',
+        r'React', r'Vue', r'Angular', r'Node\.js', r'Django', r'Flask',
+        r'PostgreSQL', r'MySQL', r'Redis', r'MongoDB', r'Docker',
+        r'Kubernetes', r'AWS', r'Azure', r'Git', r'Linux',
+        r'机器学习', r'深度学习', r'自然语言处理', r'计算机视觉',
+        r'LangChain', r'LLM', r'Agent', r'RAG', r'FastAPI'
+    ]
+    
+    skills = []
+    for pattern in skill_patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            skills.append(pattern.replace(r'\.', '.'))
+    
+    return list(set(skills))
+
+def extract_achievements(text: str) -> List[str]:
+    """从文本中提取量化成就"""
+    patterns = [
+        r'(\d+\.?\d*%)',
+        r'(\d+\.?\d*倍)',
+        r'提升(\d+\.?\d*%?)',
+        r'降低(\d+\.?\d*%?)',
+        r'减少(\d+\.?\d*%?)',
+        r'增加(\d+\.?\d*%?)',
+        r'节省(\d+\.?\d*万?元)',
+        r'创造(\d+\.?\d*万?元)'
+    ]
+    
+    achievements = []
+    for pattern in patterns:
+        matches = re.findall(pattern, text)
+        for match in matches:
+            achievements.append(match)
+    
+    return achievements
 
 def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
     """从字典解析简历数据"""
@@ -22,11 +62,25 @@ def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
     # 解析项目经历
     projects = []
     for proj_data in data.get("projects", []):
+        # 从项目描述中提取技能
+        project_text = proj_data.get("description", "")
+        project_skills = extract_skills_from_text(project_text)
+        
+        # 从项目描述中提取成就
+        achievements = proj_data.get("key_achievements", [])
+        if not achievements:
+            achievements = extract_achievements(project_text)
+        
+        # 合并技术栈
+        technologies = proj_data.get("technologies", [])
+        technologies.extend(project_skills)
+        technologies = list(set(technologies))
+        
         project = Project(
             name=proj_data.get("name", ""),
-            description=proj_data.get("description", ""),
-            key_achievements=proj_data.get("key_achievements", []),
-            technologies=proj_data.get("technologies", [])
+            description=project_text,
+            key_achievements=achievements,
+            technologies=technologies
         )
         projects.append(project)
     
@@ -34,6 +88,12 @@ def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
     skills = data.get("skills", [])
     if isinstance(skills, str):
         skills = [s.strip() for s in skills.split(",")]
+    
+    # 从项目描述中提取额外技能
+    all_project_text = " ".join([p.get("description", "") for p in data.get("projects", [])])
+    extra_skills = extract_skills_from_text(all_project_text)
+    skills.extend(extra_skills)
+    skills = list(set(skills))
     
     return Resume(
         name=data.get("name", ""),
