@@ -7,8 +7,13 @@ Streamlit UI组件封装
 import streamlit as st
 import json
 import re
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from models import Resume, JobDescription, MatchResult, InterviewPrep
+from database import Database, User, Resume as DBResume, MatchResult as DBMatchResult
+
+# 初始化数据库
+db = Database()
 
 # ============================================================
 # UI 样式 - Slate Dark (参考Vercel/Linear)
@@ -306,6 +311,43 @@ def run_match():
         results.sort(key=lambda x: x.overall_score, reverse=True)
         st.session_state.match_results = results
         s.update(label="✅ 匹配完成", state="complete")
+
+def init_user_session():
+    """初始化用户会话"""
+    if 'user' not in st.session_state:
+        # 创建临时用户
+        username = f"user_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        user = User(username=username, email=f"{username}@example.com")
+        st.session_state.user = db.create_user(user)
+
+def save_resume_to_db(resume_data: dict):
+    """保存简历到数据库"""
+    init_user_session()
+    user = st.session_state.user
+    
+    db_resume = DBResume(
+        user_id=user.id,
+        name=resume_data.get('name', ''),
+        content=json.dumps(resume_data, ensure_ascii=False),
+        parsed_data=json.dumps(resume_data, ensure_ascii=False)
+    )
+    
+    return db.save_resume(db_resume)
+
+def save_match_result_to_db(resume_id: int, jd_content: str, match_result: dict):
+    """保存匹配结果到数据库"""
+    init_user_session()
+    user = st.session_state.user
+    
+    db_result = DBMatchResult(
+        user_id=user.id,
+        resume_id=resume_id,
+        jd_content=jd_content,
+        match_score=match_result.get('overall_score', 0),
+        match_details=json.dumps(match_result, ensure_ascii=False)
+    )
+    
+    return db.save_match_result(db_result)
 
 def generate_follow_up_questions(question: str, answer: str) -> List[str]:
     """根据回答生成追问"""
