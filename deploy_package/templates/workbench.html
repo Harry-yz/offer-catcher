@@ -151,12 +151,19 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* 优化后的卡片布局 */
-        .question-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .question-header { padding: 1.2rem 1.5rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s ease; }
+        .question-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 1rem; overflow: hidden; }
+        .question-header { padding: 1rem 1.5rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s ease; }
         .question-header:hover { background: rgba(255, 255, 255, 0.05); }
         .question-body { padding: 0 1.5rem 1.5rem; display: none; }
         .question-body.open { display: block; }
+
+        .chat-container { max-height: 400px; overflow-y: auto; margin-bottom: 1rem; }
+        .chat-msg { padding: 1rem; border-radius: 16px; margin-bottom: 0.5rem; }
+        .chat-ai { background: var(--glass-bg); border: 1px solid var(--glass-border); }
+        .chat-user { background: rgba(0, 255, 135, 0.1); border: 1px solid rgba(0, 255, 135, 0.2); margin-left: 2rem; }
+
+        .chat-input-group { display: flex; gap: 1rem; }
+        .chat-input { flex: 1; }
 
         .file-input { display: none; }
 
@@ -178,12 +185,50 @@
 
         .result-panel { min-height: 400px; }
 
-        .progress-chain { padding: 1.5rem; background: var(--glass-bg); border-radius: 16px; border: 1px solid var(--glass-border); }
-        .progress-step { display: flex; align-items: center; gap: 12px; padding: 10px 0; color: var(--text-secondary); font-size: 0.95rem; transition: all 0.3s ease; }
-        .progress-step.done { color: #00ff87; }
-        .progress-step.error { color: #ff4444; }
-        .progress-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .spinner-small { width: 16px; height: 16px; border: 2px solid var(--glass-border); border-top-color: var(--aurora-green); border-radius: 50%; animation: spin 1s linear infinite; }
+        .progress-info { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; }
+
+        .progress-chain {
+            padding: 1.5rem;
+            background: var(--glass-bg);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.done {
+            color: #00ff87;
+        }
+
+        .progress-step.error {
+            color: #ff4444;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .spinner-small {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--glass-border);
+            border-top-color: var(--aurora-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -192,7 +237,7 @@
     <div class="container">
         <div class="header">
             <div class="header-left">
-                <a href="https://hradmin.oran.cn/offercatcher/" class="back-btn">
+                <a href="/" class="back-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                     返回首页
                 </a>
@@ -204,6 +249,7 @@
         </div>
 
         <div class="main-grid">
+            <!-- 左侧上传面板 -->
             <div class="panel">
                 <h2 class="panel-title">📄 上传简历</h2>
                 <div class="upload-area" id="resumeUpload" onclick="document.getElementById('resumeFile').click()">
@@ -237,6 +283,7 @@
                 </div>
             </div>
 
+            <!-- 右侧结果面板 -->
             <div class="panel result-panel" id="resultPanel">
                 <div class="empty-state" id="emptyState">
                     <div class="empty-icon">{{ '📊' if mode == 'seeker' else '⚔️' }}</div>
@@ -257,6 +304,8 @@
         let matchReport = null;
         let currentMatch = null;
         let interviewData = null;
+        let chatHistory = [];
+        let currentQuestionIdx = 0;
         let jdCounter = 0;
 
         // 初始化：添加一个JD输入框
@@ -331,6 +380,7 @@
                     <button class="btn btn-primary" onclick="retryLastAction()" style="flex:1">🔄 重试</button>
                 </div>
             `;
+            // 隐藏其他内容
             document.getElementById('parsedResult').style.display = 'none';
             document.getElementById('matchResults').style.display = 'none';
             document.getElementById('interviewPrep').style.display = 'none';
@@ -344,11 +394,18 @@
 
         function retryLastAction() {
             hideError();
+            // 根据当前页面状态重试
             if (typeof prepareInterview === 'function' && document.getElementById('prepareBtn')) {
                 prepareInterview();
             } else if (typeof parseDocuments === 'function' && document.getElementById('parseBtn')) {
                 parseDocuments();
             }
+        }
+
+        function showLoading(containerId, message = '处理中...') {
+            const container = document.getElementById(containerId);
+            container.style.display = 'block';
+            container.innerHTML = `<div class="loading"><div class="spinner"></div><div>${message}</div></div>`;
         }
 
         function showProgress(containerId) {
@@ -360,6 +417,7 @@
         function addProgressStep(text, status = 'loading') {
             const chain = document.getElementById('progressChain');
             if (!chain) return;
+            
             const step = document.createElement('div');
             step.className = `progress-step ${status}`;
             step.innerHTML = `
@@ -374,6 +432,7 @@
         function completeLastStep(text) {
             const chain = document.getElementById('progressChain');
             if (!chain) return;
+            
             const lastStep = chain.lastElementChild;
             if (lastStep) {
                 lastStep.className = 'progress-step done';
@@ -390,6 +449,11 @@
             step.className = 'progress-step done';
             step.querySelector('.progress-icon').innerHTML = '✅';
             return step;
+        }
+
+        function hideLoading(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
         }
 
         async function parseDocuments() {
@@ -424,20 +488,24 @@
                 return;
             }
 
+            // 禁用按钮
             document.getElementById('parseBtn').disabled = true;
             document.getElementById('matchBtn').disabled = true;
+
             hideError();
             document.getElementById('emptyState').style.display = 'none';
             showProgress('parsedResult');
 
             try {
+                // 步骤1：解析简历
                 await addSequentialStep('正在解析候选人简历...', 1000);
-                addProgressStep('正在调用MinerU提取文本...', 'loading');
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 300000);
 
-                const response = await fetch('/offercatcher/api/parse', {
+                addProgressStep('正在调用MinerU提取文本...', 'loading');
+
+                const response = await fetch('/api/parse', {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
@@ -451,29 +519,56 @@
                 }
 
                 const data = await response.json();
-                if (data.error) throw new Error(data.error);
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
 
                 resumeData = data.resume;
                 jdDataList = data.jds;
 
+                // 完成MinerU步骤
                 completeLastStep('文本提取完成');
                 await new Promise(r => setTimeout(r, 300));
 
-                if (jdDataList.length === 0) throw new Error('所有JD解析失败，请检查JD内容');
+                if (jdDataList.length === 0) {
+                    throw new Error('所有JD解析失败，请检查JD内容');
+                }
 
+                // 步骤2：解析JD
                 for (let i = 0; i < jdDataList.length; i++) {
                     await addSequentialStep(`正在解析岗位 ${i+1}/${jdDataList.length}: ${jdDataList[i].company}...`, 500);
                 }
+
+                // 步骤3：完成
                 await addSequentialStep('解析完成', 500);
 
                 renderParsedResult();
                 document.getElementById('matchBtn').disabled = false;
+
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    showError('请求超时', '服务器响应时间过长', '1. 检查网络连接是否正常\n2. 稍后重试\n3. 尝试较小文件');
+                    showError(
+                        '请求超时',
+                        '服务器响应时间过长',
+                        '1. 检查网络连接是否正常\n2. 稍后重试\n3. 如果问题持续，尝试使用更小的文件'
+                    );
                 } else {
+                    // 解析错误信息，尝试提取解决方案
                     const errorMsg = error.message || '未知错误';
-                    showError('解析失败', errorMsg);
+                    let solution = '';
+                    
+                    if (errorMsg.includes('MinerU')) {
+                        solution = '1. MinerU服务可能繁忙，请稍后重试\n2. 尝试使用更清晰的图片\n3. 或使用PDF格式';
+                    } else if (errorMsg.includes('文件格式')) {
+                        solution = '请上传PDF、PNG、JPG或TXT格式的文件';
+                    } else if (errorMsg.includes('过大')) {
+                        solution = '请上传小于10MB的文件，或压缩图片后重试';
+                    } else {
+                        solution = '1. 检查文件是否损坏\n2. 尝试重新上传\n3. 如果问题持续，请联系支持';
+                    }
+                    
+                    showError('解析失败', errorMsg, solution);
                 }
             } finally {
                 document.getElementById('parseBtn').disabled = false;
@@ -482,7 +577,10 @@
 
         function renderParsedResult() {
             const container = document.getElementById('parsedResult');
-            document.getElementById('emptyState').style.display = 'none';
+            const emptyState = document.getElementById('emptyState');
+            const errorDisplay = document.getElementById('errorDisplay');
+            emptyState.style.display = 'none';
+            errorDisplay.style.display = 'none';
             container.style.display = 'block';
 
             let html = `
@@ -495,20 +593,22 @@
                         <div style="font-weight:600;margin-bottom:0.5rem">技能:</div>
                         ${resumeData.skills.slice(0, 8).map(s => `<span class="tag tag-match">✓ ${s}</span>`).join('')}
                     </div>
+                    <div style="margin-top:1rem;color:rgba(255,255,255,0.7)">项目: ${resumeData.projects.length}个</div>
                 </div>
             `;
 
             jdDataList.forEach((jd, i) => {
-                const must = jd.requirements.must_have.slice(0, 4).map(r => `<span class="tag tag-match">${r.skill}</span>`).join(' ');
-                const nice = jd.requirements.nice_to_have.slice(0, 3).map(r => `<span class="tag tag-miss">${r.skill}</span>`).join(' ');
+                const must = jd.requirements.must_have.slice(0, 4).map(r => r.skill).join(', ');
                 html += `
                     <div class="card">
                         <div>
                             <div style="font-weight:600;color:#fff">岗位${i+1}: ${jd.company}</div>
                             <div style="color:rgba(255,255,255,0.7)">${jd.position} · ${jd.location}</div>
                         </div>
-                        ${must ? `<div style="margin-top:0.8rem"><div style="font-weight:500;margin-bottom:0.3rem;font-size:0.9rem">核心要求:</div>${must}</div>` : ''}
-                        ${nice ? `<div style="margin-top:0.5rem"><div style="font-weight:500;margin-bottom:0.3rem;font-size:0.9rem">加分项:</div>${nice}</div>` : ''}
+                        <div style="margin-top:1rem">
+                            <div style="font-weight:500;margin-bottom:0.5rem">必须:</div>
+                            ${must}
+                        </div>
                     </div>
                 `;
             });
@@ -530,17 +630,25 @@
             showProgress('matchResults');
 
             try {
+                // 步骤1：启动分析
                 await addSequentialStep('正在启动多Agent匹配分析...', 800);
+
+                // 步骤2：逐个分析岗位
                 for (let i = 0; i < jdDataList.length; i++) {
-                    await addSequentialStep(`正在分析岗位 ${i+1}/${jdDataList.length}: ${jdDataList[i].company} - ${jdDataList[i].position}...`, 1000);
+                    const jd = jdDataList[i];
+                    await addSequentialStep(`正在分析岗位 ${i+1}/${jdDataList.length}: ${jd.company} - ${jd.position}...`, 1000);
                 }
+
+                // 步骤3：生成报告
                 await addSequentialStep('正在生成综合分析报告...', 1200);
+
+                // 步骤4：调用API
                 addProgressStep('正在获取匹配结果...', 'loading');
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 600000);
 
-                const response = await fetch('/offercatcher/api/match', {
+                const response = await fetch('/api/match', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ resume: resumeData, jds: jdDataList }),
@@ -562,8 +670,10 @@
                         return { ...r, jd: jd };
                     });
 
+                    // 完成最后一步
                     completeLastStep('匹配结果获取完成');
                     
+                    // 显示完成信息
                     const totalJds = jdDataList.length;
                     const matchedCount = matchResults.length;
                     const failedCount = totalJds - matchedCount;
@@ -576,15 +686,222 @@
                     }
 
                     await new Promise(r => setTimeout(r, 800));
+
                     renderMatchResults();
                 } else {
                     throw new Error(data.error || '匹配失败');
                 }
+
             } catch (error) {
-                if (error.name === 'AbortError') showError('请求超时', '匹配分析超时，请稍后重试');
-                else showError('匹配失败', error.message);
+                if (error.name === 'AbortError') {
+                    showError('请求超时', '匹配分析超时，请稍后重试');
+                } else {
+                    showError('匹配失败', error.message);
+                }
             } finally {
                 document.getElementById('matchBtn').disabled = false;
+            }
+        }
+
+        async function generateStrategy() {
+            const resumeFile = document.getElementById('resumeFile').files[0];
+            if (!resumeFile) {
+                showError('请上传简历');
+                return;
+            }
+
+            const jdItems = document.querySelectorAll('.jd-item');
+            let hasJd = false;
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+
+            jdItems.forEach(item => {
+                const fileInput = item.querySelector('.jd-file');
+                const textInput = item.querySelector('.jd-text');
+
+                if (fileInput.files[0]) {
+                    formData.append('jd_files', fileInput.files[0]);
+                    hasJd = true;
+                }
+                if (textInput.value.trim()) {
+                    formData.append('jd_texts', textInput.value.trim());
+                    hasJd = true;
+                }
+            });
+
+            if (!hasJd) {
+                showError('请上传JD');
+                return;
+            }
+
+            document.getElementById('strategyBtn').disabled = true;
+            hideError();
+            document.getElementById('emptyState').style.display = 'none';
+            showProgress('interviewPrep');
+
+            try {
+                // 步骤1：解析简历
+                await addSequentialStep('正在解析候选人简历...', 1000);
+
+                addProgressStep('正在调用MinerU提取文本...', 'loading');
+
+                const parseResp = await fetch('/api/parse', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!parseResp.ok) {
+                    const err = await parseResp.json().catch(() => ({}));
+                    throw new Error(err.error || '解析失败');
+                }
+
+                const parseData = await parseResp.json();
+                if (!parseData.success) {
+                    throw new Error(parseData.error || '解析失败');
+                }
+
+                resumeData = parseData.resume;
+                jdDataList = parseData.jds;
+
+                // 完成MinerU步骤
+                completeLastStep(`简历解析完成: ${resumeData.name}`);
+                await new Promise(r => setTimeout(r, 300));
+
+                // 步骤2：分析岗位
+                await addSequentialStep(`正在分析岗位要求: ${jdDataList[0].company} - ${jdDataList[0].position}...`, 800);
+
+                // 步骤3：设计面试问题
+                await addSequentialStep('正在设计面试问题...', 1000);
+
+                // 步骤4：生成面试策略
+                addProgressStep('正在生成面试策略...', 'loading');
+
+                const strategyResp = await fetch('/api/interview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        resume: resumeData,
+                        jd: jdDataList[0],
+                        mode: 'spear'
+                    })
+                });
+
+                if (!strategyResp.ok) {
+                    const err = await strategyResp.json().catch(() => ({}));
+                    throw new Error(err.error || '生成失败');
+                }
+
+                const strategyData = await strategyResp.json();
+                if (strategyData.success) {
+                    interviewData = strategyData.result;
+
+                    // 完成最后一步
+                    completeLastStep('面试策略生成完成');
+                    await new Promise(r => setTimeout(r, 300));
+
+                    // 显示完成信息
+                    addProgressStep('✅ 生成完成', 'done');
+
+                    await new Promise(r => setTimeout(r, 500));
+
+                    renderInterviewStrategy();
+                } else {
+                    throw new Error(strategyData.error || '生成失败');
+                }
+
+            } catch (error) {
+                showError('生成失败', error.message);
+            } finally {
+                document.getElementById('strategyBtn').disabled = false;
+            }
+        }
+
+        function renderInterviewStrategy() {
+            const container = document.getElementById('interviewPrep');
+            container.style.display = 'block';
+            document.getElementById('parsedResult').style.display = 'none';
+            document.getElementById('matchResults').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+
+            const questions = interviewData.questions || [];
+            const strategy = interviewData.interview_strategy || '';
+
+            let html = `
+                <div style="margin-bottom:2rem">
+                    <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#00ff87,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem">⚔️ 面试策略</h2>
+                    <p style="color:rgba(255,255,255,0.7)">${resumeData ? resumeData.name : ''} → ${jdDataList[0] ? jdDataList[0].company + ' - ' + jdDataList[0].position : ''}</p>
+                </div>
+                <button class="btn btn-secondary" onclick="backToUpload()" style="margin-bottom:1.5rem">← 重新上传</button>
+                <div class="divider"></div>
+            `;
+
+            if (strategy) {
+                html += `
+                    <div style="margin-bottom:1.5rem;padding:1.5rem;background:rgba(0,102,255,0.1);border-radius:16px;border-left:4px solid #0066ff">
+                        <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem">📋 整体策略</div>
+                        <div style="color:var(--text-secondary);line-height:1.6">${strategy}</div>
+                    </div>
+                `;
+            }
+
+            if (questions.length > 0) {
+                questions.forEach((q, i) => {
+                    html += `
+                        <div class="card" style="margin-bottom:1.5rem">
+                            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+                                <div style="background:linear-gradient(135deg,#00ff87,#0066ff);color:#0a0a1a;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700">Q${i+1}</div>
+                                <div style="font-weight:700;color:#fff;font-size:1.1rem;flex:1">${q.question || ''}</div>
+                            </div>
+                            
+                            ${q.why_ask ? `
+                                <div style="margin-bottom:1rem;padding:1rem;background:rgba(0,255,135,0.08);border-radius:12px;border-left:3px solid #00ff87">
+                                    <div style="font-weight:600;color:#00ff87;margin-bottom:0.3rem">🎯 为什么要问</div>
+                                    <div style="color:var(--text-secondary)">${q.why_ask}</div>
+                                </div>
+                            ` : ''}
+                            
+                            ${q.key_points && q.key_points.length > 0 ? `
+                                <div style="margin-bottom:1rem">
+                                    <div style="font-weight:600;color:#0066ff;margin-bottom:0.5rem">📝 回答要点</div>
+                                    <ul style="list-style:none;padding:0">
+                                        ${q.key_points.map(p => `<li style="padding:0.3rem 0;color:var(--text-secondary)">• ${p}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${q.what_it_reveals ? `
+                                <div style="margin-bottom:1rem;padding:1rem;background:rgba(0,102,255,0.08);border-radius:12px;border-left:3px solid #0066ff">
+                                    <div style="font-weight:600;color:#0066ff;margin-bottom:0.3rem">💡 能揭示什么能力</div>
+                                    <div style="color:var(--text-secondary)">${q.what_it_reveals}</div>
+                                </div>
+                            ` : ''}
+                            
+                            ${q.red_flags && q.red_flags.length > 0 ? `
+                                <div style="padding:1rem;background:rgba(255,68,68,0.08);border-radius:12px;border-left:3px solid #ff4444">
+                                    <div style="font-weight:600;color:#ff6666;margin-bottom:0.3rem">🚩 红旗信号</div>
+                                    <ul style="list-style:none;padding:0">
+                                        ${q.red_flags.map(f => `<li style="padding:0.3rem 0;color:var(--text-secondary)">• ${f}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = html;
+        }
+
+        function backToUpload() {
+            document.getElementById('interviewPrep').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+
+        function updateLoadingMessage(containerId, message) {
+            const container = document.getElementById(containerId);
+            const loadingDiv = container.querySelector('.loading div:last-child');
+            if (loadingDiv) {
+                loadingDiv.textContent = message;
             }
         }
 
@@ -595,6 +912,7 @@
 
             let html = '';
             
+            // 显示综合分析
             if (matchReport && matchReport.overall_summary) {
                 html += `
                     <div style="margin-bottom:1.5rem;padding:1.5rem;background:rgba(0,102,255,0.1);border-radius:16px;border-left:4px solid #0066ff">
@@ -602,6 +920,19 @@
                         <div style="color:var(--text-secondary);line-height:1.6">${matchReport.overall_summary}</div>
                     </div>
                 `;
+            }
+
+            // 显示匹配统计
+            const totalJds = jdDataList.length;
+            const matchedCount = matchResults.length;
+            const failedCount = totalJds - matchedCount;
+            
+            if (failedCount > 0) {
+                html += `<div class="warn-box" style="background:rgba(255,170,0,0.1);border-left:3px solid #ffaa00;padding:1rem;border-radius:0 12px 12px 0;margin-bottom:1rem">
+                    <strong>⚠️ 匹配统计:</strong> ${matchedCount}/${totalJds} 个岗位匹配成功，${failedCount} 个岗位匹配失败
+                </div>`;
+            } else {
+                html += '<div class="success-box">✅ 匹配完成，共分析 ' + matchedCount + ' 个岗位</div>';
             }
 
             matchResults.forEach((r, i) => {
@@ -670,88 +1001,24 @@
             container.innerHTML = html;
         }
 
-        async function generateStrategy() {
-            const resumeFile = document.getElementById('resumeFile').files[0];
-            if (!resumeFile) { showError('请上传简历'); return; }
-
-            const jdItems = document.querySelectorAll('.jd-item');
-            let hasJd = false;
-            const formData = new FormData();
-            formData.append('resume', resumeFile);
-
-            jdItems.forEach(item => {
-                const fileInput = item.querySelector('.jd-file');
-                const textInput = item.querySelector('.jd-text');
-                if (fileInput.files[0]) { formData.append('jd_files', fileInput.files[0]); hasJd = true; }
-                if (textInput.value.trim()) { formData.append('jd_texts', textInput.value.trim()); hasJd = true; }
-            });
-
-            if (!hasJd) { showError('请上传JD'); return; }
-
-            document.getElementById('strategyBtn').disabled = true;
-            hideError();
-            document.getElementById('emptyState').style.display = 'none';
-            showProgress('interviewPrep');
-
-            try {
-                await addSequentialStep('正在解析候选人简历...', 1000);
-                addProgressStep('正在调用MinerU提取文本...', 'loading');
-
-                const parseResp = await fetch('/offercatcher/api/parse', { method: 'POST', body: formData });
-                if (!parseResp.ok) throw new Error('解析失败');
-                const parseData = await parseResp.json();
-                if (!parseData.success) throw new Error(parseData.error || '解析失败');
-
-                resumeData = parseData.resume;
-                jdDataList = parseData.jds;
-
-                completeLastStep(`简历解析完成: ${resumeData.name}`);
-                await new Promise(r => setTimeout(r, 300));
-                await addSequentialStep(`正在分析岗位要求: ${jdDataList[0].company}...`, 800);
-                await addSequentialStep('正在设计面试问题...', 1000);
-                addProgressStep('正在生成面试策略...', 'loading');
-
-                const strategyResp = await fetch('/offercatcher/api/interview', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ resume: resumeData, jd: jdDataList[0], mode: 'spear' })
-                });
-
-                if (!strategyResp.ok) throw new Error('生成失败');
-                const strategyData = await strategyResp.json();
-                if (strategyData.success) {
-                    interviewData = strategyData.result;
-                    completeLastStep('面试策略生成完成');
-                    await new Promise(r => setTimeout(r, 300));
-                    addProgressStep('✅ 生成完成', 'done');
-                    await new Promise(r => setTimeout(r, 500));
-                    
-                    // Note: 面试官模式直接渲染准备内容
-                    currentMatch = { company: jdDataList[0].company, position: jdDataList[0].position };
-                    renderInterviewPrep();
-                } else {
-                    throw new Error(strategyData.error || '生成失败');
-                }
-            } catch (error) {
-                showError('生成失败', error.message);
-            } finally {
-                document.getElementById('strategyBtn').disabled = false;
-            }
-        }
-
         async function startInterview(idx) {
             currentMatch = matchResults[idx];
             showProgress('interviewPrep');
 
             try {
+                // 步骤1：分析匹配结果
                 await addSequentialStep('正在分析匹配结果...', 800);
+
+                // 步骤2：生成自我介绍
                 await addSequentialStep('正在生成自我介绍...', 1000);
+
+                // 步骤3：调用API
                 addProgressStep('正在生成面试题库...', 'loading');
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 300000);
 
-                const response = await fetch('/offercatcher/api/interview', {
+                const response = await fetch('/api/interview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -765,21 +1032,34 @@
 
                 clearTimeout(timeoutId);
 
-                if (!response.ok) throw new Error('生成失败');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || '生成失败');
+                }
+
                 const data = await response.json();
                 if (data.success) {
                     interviewData = data.result;
+
+                    // 完成最后一步
                     completeLastStep('面试题库生成完成');
                     await new Promise(r => setTimeout(r, 300));
+
+                    // 显示完成信息
                     addProgressStep('✅ 生成完成', 'done');
+
                     await new Promise(r => setTimeout(r, 500));
+
                     renderInterviewPrep();
                 } else {
                     throw new Error(data.error || '生成失败');
                 }
             } catch (error) {
-                if (error.name === 'AbortError') showError('请求超时', '生成面试准备超时，请稍后重试');
-                else showError('生成失败', error.message);
+                if (error.name === 'AbortError') {
+                    showError('请求超时', '生成面试准备超时，请稍后重试');
+                } else {
+                    showError('生成失败', error.message);
+                }
             }
         }
 
@@ -796,18 +1076,19 @@
                     <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#00ff87,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem">{{ '🛡️ 面试准备' if mode == 'seeker' else '⚔️ 验证出题' }}</h2>
                     <p style="color:rgba(255,255,255,0.7)">${currentMatch.company} · ${currentMatch.position}</p>
                 </div>
-                <button class="btn btn-secondary" onclick="backToMatch()" style="margin-bottom:1.5rem">← 返回</button>
+                <button class="btn btn-secondary" onclick="backToMatch()" style="margin-bottom:1.5rem">← 返回匹配结果</button>
                 <div class="divider"></div>
 
                 <div class="tabs">
                     <button class="tab active" onclick="switchTab(0, this)">📝 自我介绍</button>
                     <button class="tab" onclick="switchTab(1, this)">❓ 面试题库</button>
+                    <button class="tab" onclick="switchTab(2, this)">💬 模拟面试</button>
                 </div>
 
                 <div class="tab-content active" id="tab-0">
                     <div class="card">
                         <div style="font-weight:600;margin-bottom:0.5rem">📄 自我介绍</div>
-                        <div style="line-height: 1.6;">${intro.formal || '暂无'}</div>
+                        <div>${intro.formal || '暂无'}</div>
                     </div>
                     ${intro.key_points && intro.key_points.length > 0 ? `
                         <div style="margin-top:1rem">
@@ -821,38 +1102,33 @@
                     ${questions.length > 0 ? questions.map((q, i) => `
                         <div class="question-card">
                             <div class="question-header" onclick="toggleQuestion(this)">
-                                <span style="font-weight:600; font-size: 1.05rem; line-height: 1.4;">Q${i+1}: ${(q.question || '').substring(0, 60)}...</span>
-                                <span style="color: var(--aurora-green);">▼</span>
+                                <span>Q${i+1}: ${(q.question || '').substring(0, 60)}...</span>
+                                <span>▼</span>
                             </div>
                             <div class="question-body">
-                                <div style="margin-bottom:1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 12px;">
-                                    <div style="font-weight:600; color: #fff; margin-bottom:0.5rem; font-size: 1.1rem;">❓ 完整问题</div>
-                                    <div style="color:var(--text-secondary); line-height: 1.5;">${q.question || ''}</div>
-                                </div>
-                                
-                                ${q.intent ? `
-                                <div style="margin-bottom:1rem; padding: 1rem; background: rgba(0,255,135,0.08); border-radius: 12px; border-left: 3px solid #00ff87;">
-                                    <div style="font-weight:600; color: #00ff87; margin-bottom:0.3rem;">🎯 面试官意图</div>
-                                    <div style="color:var(--text-secondary); line-height: 1.5;">${q.intent}</div>
-                                </div>
-                                ` : ''}
-                                
-                                <div style="margin-bottom:1rem;">
-                                    <div style="font-weight:600; color: #0066ff; margin-bottom:0.5rem;">💡 参考答案</div>
-                                    <div class="card" style="line-height: 1.6; color: var(--text-secondary);">${q.answer || '暂无'}</div>
-                                </div>
-                                
+                                <div><strong>问题:</strong> ${q.question || ''}</div>
+                                <div><strong>🛡️ 面试官意图:</strong> ${q.intent || ''}</div>
+                                <div style="margin-top:0.5rem"><strong>💡 参考答案:</strong></div>
+                                <div class="card">${q.answer || ''}</div>
                                 ${q.follow_ups && q.follow_ups.length > 0 ? `
-                                    <div style="padding: 1rem; background: rgba(0,102,255,0.08); border-radius: 12px; border-left: 3px solid #0066ff;">
-                                        <div style="font-weight:600; color: #0066ff; margin-bottom:0.5rem;">🔄 追问预判</div>
-                                        <ul style="list-style: none; padding: 0;">
-                                            ${q.follow_ups.map((fu, j) => `<li style="padding:0.3rem 0; color:var(--text-secondary); line-height: 1.4;">• ${fu}</li>`).join('')}
-                                        </ul>
-                                    </div>
+                                    <div style="margin-top:0.5rem"><strong>🔄 追问链:</strong></div>
+                                    ${q.follow_ups.map((fu, j) => `<div>${j+1}. ${fu}</div>`).join('')}
                                 ` : ''}
                             </div>
                         </div>
                     `).join('') : '<div class="warning-box">暂无面试题</div>'}
+                </div>
+
+                <div class="tab-content" id="tab-2">
+                    <div class="info-box" id="currentQuestion">
+                        <strong>当前问题:</strong> ${questions[0] ? questions[0].question : '请先生成题目'}
+                    </div>
+                    <div class="chat-container" id="chatContainer"></div>
+                    <div class="chat-input-group">
+                        <textarea class="form-textarea chat-input" id="chatInput" placeholder="输入你的回答..."></textarea>
+                        <button class="btn btn-primary" onclick="sendAnswer()">📤 发送</button>
+                        <button class="btn btn-secondary" onclick="nextQuestion()">⏭️ 下一题</button>
+                    </div>
                 </div>
             `;
 
@@ -872,11 +1148,78 @@
 
         function backToMatch() {
             document.getElementById('interviewPrep').style.display = 'none';
-            if (document.getElementById('matchResults').innerHTML.trim() !== '') {
-                document.getElementById('matchResults').style.display = 'block';
-            } else {
-                document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('matchResults').style.display = 'block';
+        }
+
+        async function sendAnswer() {
+            const input = document.getElementById('chatInput');
+            const answer = input.value.trim();
+            if (!answer) return;
+
+            const questions = interviewData.questions || [];
+            const question = questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : '';
+
+            chatHistory.push({ role: 'user', content: answer });
+            renderChat('👤 你', answer, 'chat-user');
+            input.value = '';
+
+            try {
+                const response = await fetch('/api/mock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history: chatHistory,
+                        question: question,
+                        answer: answer,
+                        resume: resumeData,
+                        mode: '{{ mode }}' === 'seeker' ? 'shield' : 'spear'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const result = data.result;
+                    const scores = result.scores || {};
+                    
+                    // 构建回复内容
+                    let reply = `**📊 评分:** 技术深度 ${scores.technical_depth || 0} | 量化支撑 ${scores.quantitative_support || 0} | 逻辑清晰 ${scores.logical_clarity || 0} | 综合 ${result.overall || 0}\n\n`;
+                    
+                    // 反馈
+                    reply += `**💬 反馈:** ${result.feedback || ''}\n\n`;
+                    
+                    // 标准答案
+                    if (result.model_answer) {
+                        reply += `**✅ 标准答案:**\n${result.model_answer}\n\n`;
+                    }
+                    
+                    // 追问
+                    if (result.next_question) {
+                        reply += `**❓ 追问:** ${result.next_question}`;
+                    }
+
+                    chatHistory.push({ role: 'assistant', content: reply });
+                    renderChat('🤖 面试官', reply, 'chat-ai');
+                }
+            } catch (error) {
+                renderChat('🤖 系统', '请求失败，请重试', 'chat-ai');
             }
+        }
+
+        function renderChat(name, content, cls) {
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.className = 'chat-msg ' + cls;
+            div.innerHTML = `<strong>${name}:</strong><br>${content.replace(/\n/g, '<br>')}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function nextQuestion() {
+            const questions = interviewData.questions || [];
+            currentQuestionIdx = (currentQuestionIdx + 1) % questions.length;
+            chatHistory = [];
+            document.getElementById('chatContainer').innerHTML = '';
+            document.getElementById('currentQuestion').innerHTML = `<strong>当前问题:</strong> ${questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : ''}`;
         }
     </script>
 </body>

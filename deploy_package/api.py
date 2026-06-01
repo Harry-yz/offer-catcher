@@ -1,4 +1,5 @@
-﻿import json
+﻿# api.py
+import json
 import re
 import base64
 import os
@@ -7,7 +8,7 @@ import logging
 from typing import Dict, Any, Optional, Union, List
 from dotenv import load_dotenv
 
-# 加载环境变量
+# 直接加载环境变量
 load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
@@ -16,32 +17,30 @@ class APIError(Exception):
     """API调用异常"""
     pass
 
+# API配置
+API_BASE = os.getenv("API_BASE", "https://api.xiaomimimo.com/v1")
+MODEL = os.getenv("MODEL", "mimo-v2.5-pro")
+API_KEY = os.getenv("MIMO_API_KEY", "")
+
 def api(messages: list, model: Optional[str] = None, json_mode: bool = False) -> Union[str, Dict[str, Any]]:
     """调用MiMo API，返回文本或解析后的dict"""
-    
-    # 【修复核心1】动态获取环境变量，防止 Gunicorn 后台运行时路径偏移导致找不到
-    API_KEY = os.getenv("MIMO_API_KEY", "")
-    API_BASE = os.getenv("API_BASE", "https://api.xiaomimimo.com/v1")
-    
     if not API_KEY:
-        raise APIError("未配置MIMO_API_KEY，请检查服务器 .env 文件！")
+        raise APIError("未配置MIMO_API_KEY，请在.env文件或环境变量中设置")
 
     data = {
-        "model": model or os.getenv("MODEL", "mimo-v2.5-pro"),
+        "model": model or MODEL,
         "messages": messages,
         "max_completion_tokens": 4096,
         "temperature": 0.1
     }
-    
-    # 【修复核心2】部分大模型强开 json_object 会报 400 错误，直接注释掉，依靠下方强大的正则提取
-    # if json_mode:
-    #     data["response_format"] = {"type": "json_object"}
+    if json_mode:
+        data["response_format"] = {"type": "json_object"}
 
     url = f"{API_BASE}/chat/completions"
+    # 使用api-key头（官方文档指定）
     headers = {
         "Content-Type": "application/json",
-        "api-key": API_KEY,
-        "Authorization": f"Bearer {API_KEY}" # 增加Bearer兼容不同网关设置
+        "api-key": API_KEY
     }
 
     logger.debug(f"API请求: {url}, 模型: {data['model']}")
@@ -55,32 +54,29 @@ def api(messages: list, model: Optional[str] = None, json_mode: bool = False) ->
             return extract_json(content)
         return content
     except requests.exceptions.RequestException as e:
-        error_msg = f"API网络请求失败: {e}"
-        if hasattr(e, 'response') and e.response is not None:
-            error_msg += f" 详情: {e.response.text}"
-        logger.error(error_msg)
-        raise APIError(error_msg)
+        logger.error(f"API请求失败: {e}")
+        raise APIError(f"API请求失败: {e}")
     except (KeyError, IndexError) as e:
         logger.error(f"API响应解析失败: {e}")
         raise APIError(f"API响应解析失败: {e}")
 
 def extract_json(text: str) -> Dict[str, Any]:
-    """从文本中稳健提取JSON - 绝对防崩溃"""
+    """从文本中稳健提取JSON - 不会崩溃"""
+    # 尝试直接解析
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
     
-    # 【修复核心3】拆分反引号字符串，防止聊天界面把代码块强行截断
-    md_block = '`' * 3
-    pattern = md_block + r'(?:json)?\s*\n?([\s\S]*?)\n?' + md_block
-    m = re.search(pattern, text)
+    # 从markdown代码块提取
+    m = re.search(r'```(?:json)?\s*\n?([\s\S]*?)\n?```', text)
     if m:
         try:
             return json.loads(m.group(1))
         except json.JSONDecodeError:
             pass
     
+    # 从第一个{到最后一个}
     s, e = text.find('{'), text.rfind('}')
     if s != -1 and e > s:
         try:
@@ -88,12 +84,14 @@ def extract_json(text: str) -> Dict[str, Any]:
         except json.JSONDecodeError:
             pass
     
+    # 全部失败，返回空结构
     logger.warning(f"JSON提取失败，原始文本: {text[:100]}...")
     return {}
 
 def parse_image(file_bytes: bytes, prompt: str) -> Dict[str, Any]:
     """图片转base64后调用API"""
     b64 = base64.b64encode(file_bytes).decode()
+    # 使用mimo-v2.5模型处理图片（根据官方文档）
     return api([
         {"role": "system", "content": "严格按JSON格式输出，不要添加其他文本。"},
         {"role": "user", "content": [
@@ -139,11 +137,12 @@ def calculate_skill_match(resume_skills: List[str], jd_skills: List[str]) -> int
 
 def calculate_experience_match(resume_text: str, jd_text: str) -> int:
     """计算经验匹配度"""
+    # 提取年限要求
     jd_years = re.findall(r'(\d+).*?年', jd_text)
     resume_years = re.findall(r'(\d+).*?年', resume_text)
     
     if not jd_years or not resume_years:
-        return 70
+        return 70  # 默认分数
     
     jd_min = int(jd_years[0])
     resume_exp = int(resume_years[0])
