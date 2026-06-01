@@ -489,71 +489,16 @@
             const workExp = resumeData.work_experience || [];
             const internships = resumeData.internships || [];
             const projects = resumeData.projects || [];
-            const certs = resumeData.certificates || [];
-            const awards = resumeData.awards || [];
 
             let html = `
                 <div class="card card-highlight">
-                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
-                        <div style="width:50px;height:50px;background:linear-gradient(135deg,#00ff87,#0066ff);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:#0a0a1a">${resumeData.name.charAt(0)}</div>
-                        <div>
-                            <div style="font-size:1.3rem;font-weight:700;color:#fff">${resumeData.name}</div>
-                            <div style="color:rgba(255,255,255,0.7);font-size:0.9rem">${edu.school} · ${edu.major} · ${edu.degree}</div>
-                            ${resumeData.phone ? `<div style="color:rgba(255,255,255,0.5);font-size:0.85rem">📞 ${resumeData.phone}</div>` : ''}
-                            ${resumeData.email ? `<div style="color:rgba(255,255,255,0.5);font-size:0.85rem">📧 ${resumeData.email}</div>` : ''}
-                        </div>
+                    <div style="font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:0.5rem">${resumeData.name}</div>
+                    <div style="color:rgba(255,255,255,0.7)">${edu.school} · ${edu.major} · ${edu.degree}</div>
+                    <div style="margin-top:0.8rem">
+                        ${resumeData.skills.slice(0, 10).map(s => `<span class="tag tag-match">${s}</span>`).join('')}
                     </div>
-                    
-                    ${resumeData.skills.length > 0 ? `
-                        <div style="margin-top:1rem">
-                            <div style="font-weight:600;margin-bottom:0.5rem">🛠️ 技能:</div>
-                            ${resumeData.skills.slice(0, 10).map(s => `<span class="tag tag-match">${s}</span>`).join('')}
-                        </div>
-                    ` : ''}
                 </div>
             `;
-
-            // 工作经历
-            if (workExp.length > 0) {
-                html += `<div class="card"><div style="font-weight:600;margin-bottom:0.5rem">💼 工作经历</div>`;
-                workExp.forEach(w => {
-                    html += `<div style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
-                        <div style="font-weight:500;color:#fff">${w.company} - ${w.position}</div>
-                        <div style="color:rgba(255,255,255,0.5);font-size:0.85rem">${w.duration}</div>
-                        ${w.key_achievements && w.key_achievements.length > 0 ? `<div style="margin-top:0.3rem;font-size:0.9rem;color:rgba(255,255,255,0.7)">${w.key_achievements.join(' · ')}</div>` : ''}
-                    </div>`;
-                });
-                html += `</div>`;
-            }
-
-            // 实习经历
-            if (internships.length > 0) {
-                html += `<div class="card"><div style="font-weight:600;margin-bottom:0.5rem">🏢 实习经历</div>`;
-                internships.forEach(i => {
-                    html += `<div style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
-                        <div style="font-weight:500;color:#fff">${i.company} - ${i.position}</div>
-                        <div style="color:rgba(255,255,255,0.5);font-size:0.85rem">${i.duration}</div>
-                        ${i.key_achievements && i.key_achievements.length > 0 ? `<div style="margin-top:0.3rem;font-size:0.9rem;color:rgba(255,255,255,0.7)">${i.key_achievements.join(' · ')}</div>` : ''}
-                    </div>`;
-                });
-                html += `</div>`;
-            }
-
-            // 项目经历
-            if (projects.length > 0) {
-                html += `<div class="card"><div style="font-weight:600;margin-bottom:0.5rem">🚀 项目经历</div>`;
-                projects.forEach(p => {
-                    html += `<div style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
-                        <div style="font-weight:500;color:#fff">${p.name}</div>
-                        <div style="color:rgba(255,255,255,0.7);font-size:0.9rem">${p.description}</div>
-                        ${p.technologies && p.technologies.length > 0 ? `<div style="margin-top:0.3rem">${p.technologies.map(t => `<span class="tag tag-match" style="font-size:0.75rem">${t}</span>`).join('')}</div>` : ''}
-                    </div>`;
-                });
-                html += `</div>`;
-            }
-            `;
-
-            // ... rest of the function remains the same
 
             jdDataList.forEach((jd, i) => {
                 const must = jd.requirements.must_have.slice(0, 4).map(r => `<span class="tag tag-match">${r.skill}</span>`).join(' ');
