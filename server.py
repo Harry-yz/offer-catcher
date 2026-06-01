@@ -12,13 +12,17 @@ from dotenv import load_dotenv
 # 加载环境变量
 load_dotenv(override=True)
 
-# 获取当前文件所在目录
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 获取项目根目录
+BASE_DIR = os.environ.get('ROOT_DIR', os.path.dirname(os.path.abspath(__file__)))
 
 # 创建Flask应用
 app = Flask(__name__, 
             template_folder=os.path.join(BASE_DIR, 'templates'),
             static_folder=os.path.join(BASE_DIR, 'static'))
+
+# 确保模板目录存在
+if not os.path.exists(os.path.join(BASE_DIR, 'templates')):
+    os.makedirs(os.path.join(BASE_DIR, 'templates'), exist_ok=True)
 
 # ============================================================
 # API层
