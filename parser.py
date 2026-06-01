@@ -53,6 +53,12 @@ def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
     
     # 解析教育背景
     edu_data = data.get("education", {})
+    # 处理education是列表的情况
+    if isinstance(edu_data, list) and len(edu_data) > 0:
+        edu_data = edu_data[0]
+    elif not isinstance(edu_data, dict):
+        edu_data = {}
+    
     education = Education(
         school=edu_data.get("school", ""),
         major=edu_data.get("major", ""),
@@ -129,40 +135,97 @@ def parse_jd_from_dict(data: Dict[str, Any]) -> JobDescription:
     )
 
 def do_parse_resume(uploaded_file) -> Optional[Resume]:
-    """解析简历文件"""
-    from api import parse_image, parse_text, pdf_to_text
+    """解析简历文件（带缓存）"""
+    from api import parse_text, pdf_to_text
     from config import PARSE_RESUME_PROMPT
+    from mineru_parser import parse_document, is_available
+    from cache_manager import get_resume_cache, save_resume_cache
     
     fb = uploaded_file.read()
     name = uploaded_file.name.lower()
     
-    if name.endswith('.pdf'):
-        text = pdf_to_text(fb)
-        if len(text) < 30:
-            logger.warning(f"PDF文本提取失败，文本长度: {len(text)}")
+    # 检查缓存
+    cached = get_resume_cache(fb)
+    if cached:
+        logger.info("简历解析命中缓存")
+        return parse_resume_from_dict(cached)
+    
+    # 使用MinerU解析PDF和图片
+    result = None
+    if name.endswith(('.pdf', '.png', '.jpg', '.jpeg')):
+        if is_available():
+            logger.info(f"使用MinerU解析: {name}")
+            text = parse_document(fb, name)
+            if text and len(text) >= 30:
+                result = parse_text(text, PARSE_RESUME_PROMPT)
+            else:
+                logger.warning("MinerU解析结果为空或太短")
+        
+        # MinerU不可用时，尝试PDF文本提取
+        if not result and name.endswith('.pdf'):
+            text = pdf_to_text(fb)
+            if len(text) >= 30:
+                result = parse_text(text, PARSE_RESUME_PROMPT)
+        
+        if not result:
+            logger.error("无法解析文件，请确保MinerU已配置")
             return None
-        result = parse_text(text, PARSE_RESUME_PROMPT)
-    elif name.endswith(('.png', '.jpg', '.jpeg')):
-        result = parse_image(fb, PARSE_RESUME_PROMPT)
     else:
+        # 纯文本
         result = parse_text(fb.decode('utf-8', errors='ignore'), PARSE_RESUME_PROMPT)
+    
+    # 保存缓存
+    if result:
+        save_resume_cache(fb, result)
     
     return parse_resume_from_dict(result)
 
 def do_parse_jd(uploaded_file=None, text_input="") -> Optional[JobDescription]:
-    """解析JD"""
-    from api import parse_image, parse_text
+    """解析JD（带缓存）"""
+    from api import parse_text
     from config import PARSE_JD_PROMPT
+    from mineru_parser import parse_document, is_available
+    from cache_manager import get_jd_cache, save_jd_cache, get_jd_text_cache, save_jd_text_cache
     
     if uploaded_file:
         fb = uploaded_file.read()
         name = uploaded_file.name.lower()
-        if name.endswith(('.png', '.jpg', '.jpeg')):
-            result = parse_image(fb, PARSE_JD_PROMPT)
+        
+        # 检查缓存
+        cached = get_jd_cache(fb)
+        if cached:
+            logger.info("JD解析命中缓存")
+            return parse_jd_from_dict(cached)
+        
+        # 使用MinerU解析图片
+        if name.endswith(('.png', '.jpg', '.jpeg', '.pdf')):
+            if is_available():
+                logger.info(f"使用MinerU解析JD: {name}")
+                text = parse_document(fb, name)
+                if text and len(text) >= 10:
+                    result = parse_text(text, PARSE_JD_PROMPT)
+                    # 保存缓存
+                    save_jd_cache(fb, result)
+                    return parse_jd_from_dict(result)
+                else:
+                    logger.warning("MinerU解析结果为空或太短")
+            
+            logger.error("无法解析图片，请确保MinerU已配置")
+            return None
         else:
             result = parse_text(fb.decode('utf-8', errors='ignore'), PARSE_JD_PROMPT)
+            # 保存缓存
+            save_jd_cache(fb, result)
     elif text_input.strip():
+        # 检查文本缓存
+        cached = get_jd_text_cache(text_input)
+        if cached:
+            logger.info("JD文本解析命中缓存")
+            return parse_jd_from_dict(cached)
+        
         result = parse_text(text_input, PARSE_JD_PROMPT)
+        # 保存缓存
+        save_jd_text_cache(text_input, result)
     else:
         return None
     

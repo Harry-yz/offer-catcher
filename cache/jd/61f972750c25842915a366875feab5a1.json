@@ -1,0 +1,52 @@
+{
+  "company": "腾讯",
+  "position": "混元评测标注平台产品实习",
+  "location": "",
+  "requirements": {
+    "must_have": [
+      {
+        "skill": "2027届本科及以上在读，计算机、人工智能、数据相关专业优先",
+        "importance": "高"
+      },
+      {
+        "skill": "重度AI工具用户（如ClaudeCode、Cursor等）；理解基础概念（Prompt、SFT、RI ToolUse等）",
+        "importance": "高"
+      },
+      {
+        "skill": "能使用AI Coding工具快速搭建demo；具备基础编程能力，可完成简单开发或数据处理",
+        "importance": "高"
+      },
+      {
+        "skill": "了解大模型数据范式（对话、Code、多模态等）；理解基础数据生产流程（标注、质检、HITL）",
+        "importance": "高"
+      },
+      {
+        "skill": "逻辑清晰，具备问题拆解与一定抽象能力；对平台型产品（工作流/数据平台）有兴趣",
+        "importance": "高"
+      }
+    ],
+    "nice_to_have": [
+      {
+        "skill": "有数据标注/数据平台/Agent相关经验",
+        "importance": "中"
+      },
+      {
+        "skill": "有demo或开源项目",
+        "importance": "中"
+      },
+      {
+        "skill": "熟悉LangChain、Agent或大模型迭代优化流程",
+        "importance": "中"
+      }
+    ]
+  },
+  "responsibilities": [
+    "参与AI Native数据生产方案设计：基于对话、Code、Agent、多模态等场景数据需求，配合数据策略完成数据生产工艺的设计与迭代",
+    "参与数据生产链路设计：包括数据采集、预标注、人工修正、质检与验收",
+    "通过AI Coding（如WorkBuddy / Cursor）快速搭建demo，验证产品方案",
+    "参与标注平台核心能力建设：模板、任务流、作业界面、质检机制等",
+    "优化人机协同（HITL）流程，提升数据生产效率与规模化能力",
+    "沉淀数据工艺与规范，抽象平台通用能力（模板/流程/数据协议）",
+    "跟踪前沿AI数据生产与标注范式"
+  ]
+}

@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能面试准备 - Offer Catcher</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --aurora-green: #00ff87;
+            --deep-blue: #0066ff;
+            --ocean-teal: #00d4aa;
+            --midnight: #0a0a1a;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --error: #ff4444;
+            --warning: #ffaa00;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--midnight);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .mesh-gradient {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(0, 255, 135, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 102, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 80%, rgba(0, 212, 170, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, #0a0a1a 0%, #0d0d2b 50%, #0a0a1a 100%);
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; position: relative; z-index: 1; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px;
+            color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; transition: all 0.3s ease;
+        }
+        .back-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); }
+
+        .page-title {
+            font-size: 2rem; font-weight: 800;
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .page-subtitle { color: var(--text-secondary); font-size: 1rem; }
+
+        .main-grid { display: grid; grid-template-columns: 420px 1fr; gap: 2rem; }
+        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .panel {
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 20px; padding: 2rem;
+        }
+
+        .panel-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--text-primary); }
+
+        .upload-area {
+            border: 2px dashed var(--glass-border); border-radius: 16px; padding: 1.5rem;
+            text-align: center; margin-bottom: 1rem; transition: all 0.3s ease; cursor: pointer;
+        }
+        .upload-area:hover { border-color: var(--aurora-green); background: rgba(0, 255, 135, 0.05); }
+        .upload-area.has-file { border-color: var(--aurora-green); background: rgba(0, 255, 135, 0.1); }
+
+        .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .upload-text { color: var(--text-secondary); font-size: 0.85rem; }
+        .upload-filename { color: var(--aurora-green); font-weight: 600; margin-top: 0.5rem; font-size: 0.9rem; }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
+
+        .form-textarea {
+            width: 100%; padding: 10px 14px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 12px; color: var(--text-primary); font-size: 0.9rem; transition: all 0.3s ease;
+            min-height: 80px; resize: vertical;
+        }
+        .form-textarea:focus { outline: none; border-color: var(--aurora-green); }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px 24px; border: none; border-radius: 12px; font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            color: #0a0a1a; box-shadow: 0 8px 32px rgba(0, 255, 135, 0.2);
+        }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 255, 135, 0.3); }
+
+        .btn-secondary { background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--glass-border); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+
+        .btn-full { width: 100%; }
+
+        .card {
+            background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border);
+            border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.2); }
+
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; margin: 2px; }
+        .tag-match { background: rgba(0, 255, 135, 0.15); color: var(--aurora-green); }
+        .tag-miss { background: rgba(255, 68, 68, 0.15); color: #ff6666; }
+
+        .score-big {
+            font-size: 3rem; font-weight: 900;
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .score-bar { background: rgba(255, 255, 255, 0.1); border-radius: 10px; height: 10px; overflow: hidden; margin-top: 1rem; }
+        .score-fill { height: 100%; border-radius: 10px; background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue)); transition: width 0.5s ease; }
+
+        .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin: 1.5rem 0; }
+
+        .info-box { background: rgba(0, 102, 255, 0.1); border-left: 3px solid var(--deep-blue); padding: 1rem 1.5rem; border-radius: 0 12px 12px 0; margin: 1rem 0; }
+        .success-box { background: rgba(0, 255, 135, 0.1); border-left: 3px solid var(--aurora-green); padding: 1rem 1.5rem; border-radius: 0 12px 12px 0; margin: 1rem 0; }
+        .error-box { background: rgba(255, 68, 68, 0.1); border-left: 3px solid var(--error); padding: 1rem 1.5rem; border-radius: 0 12px 12px 0; margin: 1rem 0; }
+
+        .empty-state { text-align: center; padding: 5rem 2rem; color: var(--text-muted); }
+        .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; }
+
+        .loading { text-align: center; padding: 2rem; }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--glass-border); border-top-color: var(--aurora-green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .progress-chain {
+            padding: 1.5rem;
+            background: var(--glass-bg);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.done { color: #00ff87; }
+        .progress-step.error { color: #ff4444; }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .spinner-small {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--glass-border);
+            border-top-color: var(--aurora-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .tabs { display: flex; gap: 4px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 4px; margin-bottom: 1.5rem; }
+        .tab { flex: 1; padding: 10px 16px; border: none; background: transparent; color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; cursor: pointer; border-radius: 10px; transition: all 0.3s ease; }
+        .tab.active { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .question-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 1rem; overflow: hidden; }
+        .question-header { padding: 1rem 1.5rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s ease; }
+        .question-header:hover { background: rgba(255, 255, 255, 0.05); }
+        .question-body { padding: 0 1.5rem 1.5rem; display: none; }
+        .question-body.open { display: block; }
+
+        .chat-container { max-height: 400px; overflow-y: auto; margin-bottom: 1rem; }
+        .chat-msg { padding: 1rem; border-radius: 16px; margin-bottom: 0.5rem; }
+        .chat-ai { background: var(--glass-bg); border: 1px solid var(--glass-border); }
+        .chat-user { background: rgba(0, 255, 135, 0.1); border: 1px solid rgba(0, 255, 135, 0.2); margin-left: 2rem; }
+
+        .chat-input-group { display: flex; gap: 1rem; }
+        .chat-input { flex: 1; }
+
+        .file-input { display: none; }
+    </style>
+</head>
+<body>
+    <div class="mesh-gradient"></div>
+
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <a href="/" class="back-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回首页
+                </a>
+                <div>
+                    <h1 class="page-title">🛡️ 智能面试准备</h1>
+                    <p class="page-subtitle">上传简历和目标岗位，AI为你生成面试题库和自我介绍</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- 左侧上传面板 -->
+            <div class="panel">
+                <h2 class="panel-title">📄 上传简历</h2>
+                <div class="upload-area" id="resumeUpload" onclick="document.getElementById('resumeFile').click()">
+                    <div class="upload-icon">📎</div>
+                    <div class="upload-text">点击上传 PDF / PNG / JPG</div>
+                    <div class="upload-filename" id="resumeFilename"></div>
+                </div>
+                <input type="file" id="resumeFile" class="file-input" accept=".pdf,.png,.jpg,.jpeg" onchange="handleResumeUpload(this)">
+
+                <h2 class="panel-title">🎯 目标岗位</h2>
+                <div class="upload-area" id="jdUpload" onclick="document.getElementById('jdFile').click()">
+                    <div class="upload-icon">📎</div>
+                    <div class="upload-text">点击上传 JD 图片</div>
+                    <div class="upload-filename" id="jdFilename"></div>
+                </div>
+                <input type="file" id="jdFile" class="file-input" accept=".png,.jpg,.jpeg,.pdf" onchange="handleJdUpload(this)">
+                <div class="form-group">
+                    <label class="form-label">或粘贴JD文本</label>
+                    <textarea class="form-textarea" id="jdText" placeholder="粘贴岗位描述..."></textarea>
+                </div>
+
+                <button class="btn btn-primary btn-full" id="prepareBtn" onclick="prepareInterview()">
+                    🛡️ 生成面试准备
+                </button>
+            </div>
+
+            <!-- 右侧结果面板 -->
+            <div class="panel result-panel" id="resultPanel">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">🛡️</div>
+                    <div>上传简历和JD后，点击「生成面试准备」</div>
+                </div>
+                <div id="progressDisplay" style="display:none"></div>
+                <div id="matchResult" style="display:none"></div>
+                <div id="interviewPrep" style="display:none"></div>
+                <div id="errorDisplay" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let resumeData = null;
+        let jdData = null;
+        let matchResult = null;
+        let interviewData = null;
+        let chatHistory = [];
+        let currentQuestionIdx = 0;
+
+        function handleResumeUpload(input) {
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                document.getElementById('resumeFilename').textContent = '✅ ' + file.name;
+                document.getElementById('resumeUpload').classList.add('has-file');
+            }
+        }
+
+        function handleJdUpload(input) {
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                document.getElementById('jdFilename').textContent = '✅ ' + file.name;
+                document.getElementById('jdUpload').classList.add('has-file');
+            }
+        }
+
+        function showError(message, details = '') {
+            const container = document.getElementById('errorDisplay');
+            container.style.display = 'block';
+            container.innerHTML = `
+                <div class="error-box">
+                    <strong>❌ 错误</strong><br>
+                    ${message}
+                    ${details ? `<br><small style="color:var(--text-muted)">${details}</small>` : ''}
+                </div>
+                <button class="btn btn-secondary btn-full" onclick="hideError()" style="margin-top:1rem">关闭</button>
+            `;
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('progressDisplay').style.display = 'none';
+            document.getElementById('matchResult').style.display = 'none';
+            document.getElementById('interviewPrep').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('errorDisplay').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+
+        function showProgress() {
+            const container = document.getElementById('progressDisplay');
+            container.style.display = 'block';
+            container.innerHTML = '<div class="progress-chain" id="progressChain"></div>';
+        }
+
+        function addProgressStep(text, status = 'loading') {
+            const chain = document.getElementById('progressChain');
+            if (!chain) return;
+            
+            const step = document.createElement('div');
+            step.className = `progress-step ${status}`;
+            step.innerHTML = `
+                <div class="progress-icon">${status === 'done' ? '✅' : status === 'error' ? '❌' : '<div class="spinner-small"></div>'}</div>
+                <div class="progress-text">${text}</div>
+            `;
+            chain.appendChild(step);
+            step.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function updateLastProgress(text, status = 'done') {
+            const chain = document.getElementById('progressChain');
+            if (!chain) return;
+            
+            const lastStep = chain.lastElementChild;
+            if (lastStep) {
+                lastStep.className = `progress-step ${status}`;
+                lastStep.querySelector('.progress-icon').innerHTML = status === 'done' ? '✅' : status === 'error' ? '❌' : '<div class="spinner-small"></div>';
+                lastStep.querySelector('.progress-text').textContent = text;
+            }
+        }
+
+        async function prepareInterview() {
+            const resumeFile = document.getElementById('resumeFile').files[0];
+            if (!resumeFile) {
+                showError('请上传简历');
+                return;
+            }
+
+            const jdFile = document.getElementById('jdFile').files[0];
+            const jdText = document.getElementById('jdText').value.trim();
+            if (!jdFile && !jdText) {
+                showError('请上传JD或粘贴JD文本');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+            if (jdFile) {
+                formData.append('jd_files', jdFile);
+            }
+            if (jdText) {
+                formData.append('jd_texts', jdText);
+            }
+
+            document.getElementById('prepareBtn').disabled = true;
+            hideError();
+            document.getElementById('emptyState').style.display = 'none';
+            showProgress();
+
+            try {
+                // 解析简历
+                addProgressStep('正在解析候选人简历...');
+                await new Promise(r => setTimeout(r, 500));
+
+                const parseResp = await fetch('/api/parse', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!parseResp.ok) {
+                    const err = await parseResp.json().catch(() => ({}));
+                    throw new Error(err.error || '解析失败');
+                }
+
+                const parseData = await parseResp.json();
+                if (!parseData.success) {
+                    throw new Error(parseData.error || '解析失败');
+                }
+
+                resumeData = parseData.resume;
+                const jds = parseData.jds;
+                if (jds.length > 0) {
+                    jdData = jds[0];
+                }
+
+                updateLastProgress(`简历解析完成: ${resumeData.name}`, 'done');
+
+                // 解析JD
+                addProgressStep('正在解析目标岗位...');
+                await new Promise(r => setTimeout(r, 500));
+                updateLastProgress(`岗位解析完成: ${jdData.company} - ${jdData.position}`, 'done');
+
+                // 生成面试准备
+                addProgressStep('正在分析岗位要求...');
+                await new Promise(r => setTimeout(r, 500));
+                updateLastProgress('岗位分析完成', 'done');
+
+                addProgressStep('正在生成面试题库...');
+                await new Promise(r => setTimeout(r, 500));
+
+                const interviewResp = await fetch('/api/interview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        resume: resumeData,
+                        jd: jdData,
+                        match_result: {},
+                        mode: 'shield'
+                    })
+                });
+
+                if (!interviewResp.ok) {
+                    const err = await interviewResp.json().catch(() => ({}));
+                    throw new Error(err.error || '生成失败');
+                }
+
+                const interviewRespData = await interviewResp.json();
+                if (interviewRespData.success) {
+                    interviewData = interviewRespData.result;
+                    updateLastProgress('面试题库生成完成', 'done');
+                    addProgressStep('正在生成自我介绍...');
+                    await new Promise(r => setTimeout(r, 500));
+                    updateLastProgress('自我介绍生成完成', 'done');
+
+                    await new Promise(r => setTimeout(r, 500));
+                    renderResults();
+                } else {
+                    throw new Error(interviewRespData.error || '生成失败');
+                }
+
+            } catch (error) {
+                showError('生成失败', error.message);
+            } finally {
+                document.getElementById('prepareBtn').disabled = false;
+            }
+        }
+
+        function renderResults() {
+            document.getElementById('progressDisplay').style.display = 'none';
+            document.getElementById('interviewPrep').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+
+            renderInterviewPrep();
+        }
+
+        function renderMatchResult() {
+            const container = document.getElementById('matchResult');
+            if (!matchResult) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const score = matchResult.score || 0;
+            const color = score >= 80 ? '#00ff87' : score >= 60 ? '#ffaa00' : '#ff4444';
+            const label = score >= 90 ? '高度匹配' : score >= 70 ? '较好匹配' : score >= 50 ? '一般匹配' : '匹配度低';
+
+            let html = `
+                <div class="card" style="margin-bottom:1.5rem">
+                    <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem">
+                        <div style="text-align:center">
+                            <div class="score-big" style="font-size:3rem">${score}</div>
+                            <div style="color:${color};font-weight:600;font-size:1.1rem">${label}</div>
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-weight:700;color:#fff;font-size:1.2rem">${matchResult.company || ''}</div>
+                            <div style="color:var(--text-secondary);margin-top:0.3rem">${matchResult.position || ''} · ${matchResult.location || ''}</div>
+                        </div>
+                    </div>
+                    <div class="score-bar"><div class="score-fill" style="width:${score}%"></div></div>
+                </div>
+            `;
+
+            if (matchResult.summary) {
+                html += `<div class="info-box">${matchResult.summary}</div>`;
+            }
+
+            if (matchResult.matched && matchResult.matched.length > 0) {
+                html += `<div style="margin-bottom:1rem"><div style="font-weight:600;color:#00ff87;margin-bottom:0.5rem">✅ 匹配项</div>`;
+                html += matchResult.matched.map(m => `<div style="padding:0.3rem 0;color:var(--text-secondary)">• ${m}</div>`).join('');
+                html += `</div>`;
+            }
+
+            if (matchResult.unmatched && matchResult.unmatched.length > 0) {
+                html += `<div style="margin-bottom:1rem"><div style="font-weight:600;color:#ff6666;margin-bottom:0.5rem">❌ 不匹配项</div>`;
+                html += matchResult.unmatched.map(m => `<div style="padding:0.3rem 0;color:var(--text-secondary)">• ${m}</div>`).join('');
+                html += `</div>`;
+            }
+
+            if (matchResult.optimization && matchResult.optimization.length > 0) {
+                html += `<div><div style="font-weight:600;color:#ffaa00;margin-bottom:0.5rem">💡 简历优化建议</div>`;
+                html += matchResult.optimization.map(m => `<div style="padding:0.3rem 0;color:var(--text-secondary)">• ${m}</div>`).join('');
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderInterviewPrep() {
+            const container = document.getElementById('interviewPrep');
+            if (!interviewData) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const intro = interviewData.self_intro || {};
+            const questions = interviewData.questions || [];
+
+            let html = `
+                <div style="margin-top:1.5rem">
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchTab(0, this)">📝 自我介绍</button>
+                        <button class="tab" onclick="switchTab(1, this)">❓ 面试题库</button>
+                        <button class="tab" onclick="switchTab(2, this)">💬 模拟面试</button>
+                    </div>
+
+                    <div class="tab-content active" id="tab-0">
+                        <div class="card">
+                            <div style="font-weight:600;margin-bottom:0.5rem">📄 自我介绍</div>
+                            <div style="color:var(--text-secondary);line-height:1.6">${intro.formal || '暂无'}</div>
+                        </div>
+                        ${intro.key_points && intro.key_points.length > 0 ? `
+                            <div style="margin-top:1rem">
+                                <div style="font-weight:600;margin-bottom:0.5rem">🎯 关键数据点</div>
+                                ${intro.key_points.map(p => `<div class="info-box">${p}</div>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="tab-content" id="tab-1">
+                        ${questions.length > 0 ? questions.map((q, i) => `
+                            <div class="question-card">
+                                <div class="question-header" onclick="toggleQuestion(this)">
+                                    <span style="font-weight:600">Q${i+1}: ${(q.question || '').substring(0, 60)}...</span>
+                                    <span>▼</span>
+                                </div>
+                                <div class="question-body">
+                                    <div style="margin-bottom:0.5rem"><strong>问题:</strong> ${q.question || ''}</div>
+                                    <div style="margin-bottom:0.5rem"><strong>面试官意图:</strong> ${q.intent || ''}</div>
+                                    <div style="margin-bottom:0.5rem"><strong>参考答案:</strong></div>
+                                    <div class="card">${q.answer || ''}</div>
+                                    ${q.follow_ups && q.follow_ups.length > 0 ? `
+                                        <div style="margin-top:0.5rem"><strong>追问链:</strong></div>
+                                        ${q.follow_ups.map((fu, j) => `<div>${j+1}. ${fu}</div>`).join('')}
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('') : '<div class="info-box">暂无面试题</div>'}
+                    </div>
+
+                    <div class="tab-content" id="tab-2">
+                        <div class="info-box" id="currentQuestion">
+                            <strong>当前问题:</strong> ${questions[0] ? questions[0].question : '请先生成题目'}
+                        </div>
+                        <div class="chat-container" id="chatContainer"></div>
+                        <div class="chat-input-group">
+                            <textarea class="form-textarea chat-input" id="chatInput" placeholder="输入你的回答..."></textarea>
+                            <button class="btn btn-primary" onclick="sendAnswer()">📤 发送</button>
+                            <button class="btn btn-secondary" onclick="nextQuestion()">⏭️ 下一题</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function switchTab(idx, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + idx).classList.add('active');
+        }
+
+        function toggleQuestion(header) {
+            header.nextElementSibling.classList.toggle('open');
+        }
+
+        async function sendAnswer() {
+            const input = document.getElementById('chatInput');
+            const answer = input.value.trim();
+            if (!answer) return;
+
+            const questions = interviewData.questions || [];
+            const question = questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : '';
+
+            chatHistory.push({ role: 'user', content: answer });
+            renderChat('👤 你', answer, 'chat-user');
+            input.value = '';
+
+            try {
+                const response = await fetch('/api/mock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history: chatHistory,
+                        question: question,
+                        answer: answer,
+                        resume: resumeData,
+                        mode: 'shield'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const result = data.result;
+                    const scores = result.scores || {};
+                    
+                    // 构建回复内容
+                    let reply = `**📊 评分:** 技术深度 ${scores.technical_depth || 0} | 量化支撑 ${scores.quantitative_support || 0} | 逻辑清晰 ${scores.logical_clarity || 0} | 综合 ${result.overall || 0}\n\n`;
+                    
+                    // 反馈
+                    reply += `**💬 反馈:** ${result.feedback || ''}\n\n`;
+                    
+                    // 标准答案
+                    if (result.model_answer) {
+                        reply += `**✅ 标准答案:**\n${result.model_answer}\n\n`;
+                    }
+                    
+                    // 追问
+                    if (result.next_question) {
+                        reply += `**❓ 追问:** ${result.next_question}`;
+                    }
+
+                    chatHistory.push({ role: 'assistant', content: reply });
+                    renderChat('🤖 面试官', reply, 'chat-ai');
+                }
+            } catch (error) {
+                renderChat('🤖 系统', '请求失败，请重试', 'chat-ai');
+            }
+        }
+
+        function renderChat(name, content, cls) {
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.className = 'chat-msg ' + cls;
+            div.innerHTML = `<strong>${name}:</strong><br>${content.replace(/\n/g, '<br>')}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function nextQuestion() {
+            const questions = interviewData.questions || [];
+            currentQuestionIdx = (currentQuestionIdx + 1) % questions.length;
+            chatHistory = [];
+            document.getElementById('chatContainer').innerHTML = '';
+            document.getElementById('currentQuestion').innerHTML = `<strong>当前问题:</strong> ${questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : ''}`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offer Catcher - AI求职智能匹配</title>
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --aurora-green: #00ff87;
+            --deep-blue: #0066ff;
+            --ocean-teal: #00d4aa;
+            --midnight: #0a0a1a;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-hover: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.5);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--midnight);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .mesh-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(0, 255, 135, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 102, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 80%, rgba(0, 212, 170, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 90%, rgba(0, 102, 255, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, #0a0a1a 0%, #0d0d2b 50%, #0a0a1a 100%);
+            animation: meshMove 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes meshMove {
+            0% { background-position: 0% 0%, 100% 0%, 0% 100%, 100% 100%, 0% 0%; }
+            50% { background-position: 20% 20%, 80% 40%, 30% 70%, 70% 80%, 0% 0%; }
+            100% { background-position: 40% 40%, 60% 60%, 50% 50%, 50% 50%, 0% 0%; }
+        }
+
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            animation: float 15s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--aurora-green);
+            top: -100px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 350px;
+            height: 350px;
+            background: var(--deep-blue);
+            bottom: -50px;
+            right: -50px;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 300px;
+            height: 300px;
+            background: var(--ocean-teal);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -30px) scale(1.05); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(20px, 10px) scale(1.02); }
+        }
+
+        .header {
+            text-align: center;
+            padding: 80px 20px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            border-radius: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 20px 60px rgba(0, 255, 135, 0.2);
+        }
+
+        .logo svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+
+        .title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.8) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+
+        @media (max-width: 1024px) { .card-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .card-grid { grid-template-columns: 1fr; } }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-10px);
+            background: var(--glass-hover);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 100px rgba(0, 255, 135, 0.1);
+        }
+
+        .glass-card:hover .card-icon { transform: rotate(15deg); }
+        .glass-card:hover .card-arrow { transform: translateX(5px); opacity: 1; }
+
+        .card-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .card-icon svg { width: 40px; height: 40px; }
+
+        .card-icon.seeker {
+            background: linear-gradient(135deg, rgba(0, 255, 135, 0.2), rgba(0, 212, 170, 0.2));
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+        .card-icon.seeker svg { fill: var(--aurora-green); }
+
+        .card-icon.interviewer {
+            background: linear-gradient(135deg, rgba(0, 102, 255, 0.2), rgba(0, 150, 255, 0.2));
+            border: 1px solid rgba(0, 102, 255, 0.3);
+        }
+        .card-icon.interviewer svg { fill: var(--deep-blue); }
+
+        .card-icon.match {
+            background: linear-gradient(135deg, rgba(0, 212, 170, 0.2), rgba(0, 255, 200, 0.2));
+            border: 1px solid rgba(0, 212, 170, 0.3);
+        }
+        .card-icon.match svg { fill: var(--ocean-teal); }
+
+        .card-label {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }
+
+        .card-label.seeker { background: rgba(0, 255, 135, 0.15); color: var(--aurora-green); }
+        .card-label.interviewer { background: rgba(0, 102, 255, 0.15); color: var(--deep-blue); }
+        .card-label.match { background: rgba(0, 212, 170, 0.15); color: var(--ocean-teal); }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .card-features {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .card-features li {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-features li:last-child { border-bottom: none; }
+
+        .card-features li::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .card-features.seeker li::before { background: var(--aurora-green); }
+        .card-features.interviewer li::before { background: var(--deep-blue); }
+        .card-features.match li::before { background: var(--ocean-teal); }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .card-footer.seeker { color: var(--aurora-green); }
+        .card-footer.interviewer { color: var(--deep-blue); }
+        .card-footer.match { color: var(--ocean-teal); }
+
+        .card-arrow {
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+
+        .card-arrow svg { width: 20px; height: 20px; fill: currentColor; }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+
+        @media (max-width: 768px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .process {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 48px 40px;
+            margin-bottom: 60px;
+        }
+
+        .process-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--text-primary);
+        }
+
+        .process-steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) { .process-steps { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px) { .process-steps { grid-template-columns: 1fr; } }
+
+        .step { text-align: center; }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0 auto 16px;
+        }
+
+        .step-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .step-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        @media (max-width: 640px) {
+            .header { padding: 60px 16px 30px; }
+            .container { padding: 20px 16px 60px; }
+            .glass-card { padding: 32px 24px; }
+            .process { padding: 32px 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mesh-gradient"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <header class="header">
+        <div class="logo">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+        </div>
+        <h1 class="title">Offer Catcher</h1>
+        <p class="subtitle">AI驱动的智能求职匹配平台，让每一次面试都更有准备</p>
+    </header>
+
+    <main class="container">
+        <div class="card-grid">
+            <a href="/seeker" class="glass-card">
+                <div class="card-icon match">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <span class="card-label match">求职者</span>
+                <h2 class="card-title">智能岗位匹配</h2>
+                <p class="card-desc">上传简历和多个JD，AI帮你找到最匹配的岗位并优化简历</p>
+                <ul class="card-features match">
+                    <li>支持多个岗位同时分析</li>
+                    <li>匹配度量化评分排序</li>
+                    <li>匹配项与不匹配项分析</li>
+                    <li>简历优化具体建议</li>
+                </ul>
+                <div class="card-footer match">
+                    <span>开始匹配</span>
+                    <span class="card-arrow">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                        </svg>
+                    </span>
+                </div>
+            </a>
+
+            <a href="/interview" class="glass-card">
+                <div class="card-icon seeker">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <span class="card-label seeker">求职者</span>
+                <h2 class="card-title">智能面试准备</h2>
+                <p class="card-desc">上传简历和1个目标岗位，AI为你生成面试题库和自我介绍</p>
+                <ul class="card-features seeker">
+                    <li>岗位匹配度分析</li>
+                    <li>个性化面试题库</li>
+                    <li>自我介绍智能撰写</li>
+                    <li>模拟面试训练</li>
+                </ul>
+                <div class="card-footer seeker">
+                    <span>开始准备</span>
+                    <span class="card-arrow">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                        </svg>
+                    </span>
+                </div>
+            </a>
+
+            <a href="/interviewer" class="glass-card">
+                <div class="card-icon interviewer">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+                    </svg>
+                </div>
+                <span class="card-label interviewer">面试官</span>
+                <h2 class="card-title">候选人深度验证</h2>
+                <p class="card-desc">上传简历和1个JD，AI生成面试问题和验证策略</p>
+                <ul class="card-features interviewer">
+                    <li>针对性面试问题设计</li>
+                    <li>考察目标明确说明</li>
+                    <li>回答要点分析</li>
+                    <li>红旗信号识别</li>
+                </ul>
+                <div class="card-footer interviewer">
+                    <span>开始验证</span>
+                    <span class="card-arrow">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                        </svg>
+                    </span>
+                </div>
+            </a>
+        </div>
+
+        <div class="process">
+            <h2 class="process-title">使用流程</h2>
+            <div class="process-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3 class="step-title">选择模式</h3>
+                    <p class="step-desc">根据需求选择求职者或面试官模式</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3 class="step-title">上传文档</h3>
+                    <p class="step-desc">上传简历PDF/图片和目标岗位JD</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3 class="step-title">智能分析</h3>
+                    <p class="step-desc">AI自动解析并生成结构化数据</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3 class="step-title">获取结果</h3>
+                    <p class="step-desc">查看匹配分析和面试准备方案</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Powered by MiMo AI &copy; 2026 Offer Catcher. All rights reserved.</p>
+    </footer>
+</body>
+</html>

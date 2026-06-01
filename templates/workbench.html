@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ '求职者模式' if mode == 'seeker' else '面试官模式' }} - Offer Catcher</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --aurora-green: #00ff87;
+            --deep-blue: #0066ff;
+            --ocean-teal: #00d4aa;
+            --midnight: #0a0a1a;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --error: #ff4444;
+            --warning: #ffaa00;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--midnight);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .mesh-gradient {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(0, 255, 135, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 102, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 80%, rgba(0, 212, 170, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, #0a0a1a 0%, #0d0d2b 50%, #0a0a1a 100%);
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; position: relative; z-index: 1; }
+
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px;
+            color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; transition: all 0.3s ease;
+        }
+        .back-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); }
+
+        .page-title {
+            font-size: 2rem; font-weight: 800;
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .page-subtitle { color: var(--text-secondary); font-size: 1rem; }
+
+        .main-grid { display: grid; grid-template-columns: 420px 1fr; gap: 2rem; }
+        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .panel {
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 20px; padding: 2rem;
+        }
+
+        .panel-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--text-primary); }
+
+        .upload-area {
+            border: 2px dashed var(--glass-border); border-radius: 16px; padding: 1.5rem;
+            text-align: center; margin-bottom: 1rem; transition: all 0.3s ease; cursor: pointer;
+        }
+        .upload-area:hover { border-color: var(--aurora-green); background: rgba(0, 255, 135, 0.05); }
+        .upload-area.has-file { border-color: var(--aurora-green); background: rgba(0, 255, 135, 0.1); }
+        .upload-area.error { border-color: var(--error); background: rgba(255, 68, 68, 0.1); }
+
+        .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .upload-text { color: var(--text-secondary); font-size: 0.85rem; }
+        .upload-filename { color: var(--aurora-green); font-weight: 600; margin-top: 0.5rem; font-size: 0.9rem; }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
+
+        .form-input, .form-textarea {
+            width: 100%; padding: 10px 14px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 12px; color: var(--text-primary); font-size: 0.9rem; transition: all 0.3s ease;
+        }
+        .form-input:focus, .form-textarea:focus { outline: none; border-color: var(--aurora-green); }
+        .form-textarea { min-height: 80px; resize: vertical; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px 24px; border: none; border-radius: 12px; font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            color: #0a0a1a; box-shadow: 0 8px 32px rgba(0, 255, 135, 0.2);
+        }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 255, 135, 0.3); }
+
+        .btn-secondary { background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--glass-border); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+
+        .btn-danger { background: rgba(255, 68, 68, 0.2); color: #ff6666; border: 1px solid rgba(255, 68, 68, 0.3); }
+        .btn-danger:hover { background: rgba(255, 68, 68, 0.3); }
+
+        .btn-group { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        .btn-full { flex: 1; }
+
+        .card {
+            background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border);
+            border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.2); }
+        .card-highlight { border-left: 3px solid var(--aurora-green); }
+
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; margin: 2px; }
+        .tag-match { background: rgba(0, 255, 135, 0.15); color: var(--aurora-green); }
+        .tag-miss { background: rgba(255, 68, 68, 0.15); color: #ff6666; }
+
+        .score-big {
+            font-size: 3rem; font-weight: 900;
+            background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .score-bar { background: rgba(255, 255, 255, 0.1); border-radius: 10px; height: 10px; overflow: hidden; margin-top: 1rem; }
+        .score-fill { height: 100%; border-radius: 10px; background: linear-gradient(135deg, var(--aurora-green), var(--deep-blue)); transition: width 0.5s ease; }
+
+        .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin: 1.5rem 0; }
+
+        .info-box { background: rgba(0, 102, 255, 0.1); border-left: 3px solid var(--deep-blue); padding: 1rem 1.5rem; border-radius: 0 12px 12px 0; margin: 1rem 0; }
+        .success-box { background: rgba(0, 255, 135, 0.1); border-left: 3px solid var(--aurora-green); padding: 1rem 1.5rem; border-radius: 0 12px 12px 0; margin: 1rem 0; }
+        .error-box { background: rgba(255, 68, 68, 0.1); border-left: 3px solid var(--error); padding: 1rem 1.5rem; border-radius: 0 12px 12px 0; margin: 1rem 0; }
+        .warning-box { background: rgba(255, 170, 0, 0.1); border-left: 3px solid var(--warning); padding: 1rem 1.5rem; border-radius: 0 12px 12px 0; margin: 1rem 0; }
+
+        .empty-state { text-align: center; padding: 5rem 2rem; color: var(--text-muted); }
+        .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; }
+
+        .loading { text-align: center; padding: 2rem; }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--glass-border); border-top-color: var(--aurora-green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .tabs { display: flex; gap: 4px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 4px; margin-bottom: 1.5rem; }
+        .tab { flex: 1; padding: 10px 16px; border: none; background: transparent; color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; cursor: pointer; border-radius: 10px; transition: all 0.3s ease; }
+        .tab.active { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .question-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 1rem; overflow: hidden; }
+        .question-header { padding: 1rem 1.5rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s ease; }
+        .question-header:hover { background: rgba(255, 255, 255, 0.05); }
+        .question-body { padding: 0 1.5rem 1.5rem; display: none; }
+        .question-body.open { display: block; }
+
+        .chat-container { max-height: 400px; overflow-y: auto; margin-bottom: 1rem; }
+        .chat-msg { padding: 1rem; border-radius: 16px; margin-bottom: 0.5rem; }
+        .chat-ai { background: var(--glass-bg); border: 1px solid var(--glass-border); }
+        .chat-user { background: rgba(0, 255, 135, 0.1); border: 1px solid rgba(0, 255, 135, 0.2); margin-left: 2rem; }
+
+        .chat-input-group { display: flex; gap: 1rem; }
+        .chat-input { flex: 1; }
+
+        .file-input { display: none; }
+
+        .jd-item {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px;
+            padding: 1rem; margin-bottom: 1rem; position: relative;
+        }
+        .jd-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .jd-item-title { font-weight: 600; font-size: 0.9rem; }
+        .jd-remove { background: none; border: none; color: #ff6666; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; }
+        .jd-remove:hover { background: rgba(255, 68, 68, 0.2); }
+
+        .add-jd-btn {
+            width: 100%; padding: 12px; background: var(--glass-bg); border: 2px dashed var(--glass-border);
+            border-radius: 12px; color: var(--text-secondary); font-size: 0.9rem; cursor: pointer;
+            transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .add-jd-btn:hover { border-color: var(--aurora-green); color: var(--aurora-green); }
+
+        .result-panel { min-height: 400px; }
+
+        .progress-info { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; }
+
+        .progress-chain {
+            padding: 1.5rem;
+            background: var(--glass-bg);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.done {
+            color: #00ff87;
+        }
+
+        .progress-step.error {
+            color: #ff4444;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .spinner-small {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--glass-border);
+            border-top-color: var(--aurora-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="mesh-gradient"></div>
+
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <a href="/" class="back-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回首页
+                </a>
+                <div>
+                    <h1 class="page-title">{{ '🛡️ 求职者模式' if mode == 'seeker' else '⚔️ 面试官模式' }}</h1>
+                    <p class="page-subtitle">{{ '上传简历与目标岗位，AI为你生成个性化的面试准备方案' if mode == 'seeker' else '精准识别简历包装，验证候选人项目真实性与技术深度' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- 左侧上传面板 -->
+            <div class="panel">
+                <h2 class="panel-title">📄 上传简历</h2>
+                <div class="upload-area" id="resumeUpload" onclick="document.getElementById('resumeFile').click()">
+                    <div class="upload-icon">📎</div>
+                    <div class="upload-text">点击上传 PDF / PNG / JPG</div>
+                    <div class="upload-filename" id="resumeFilename"></div>
+                </div>
+                <input type="file" id="resumeFile" class="file-input" accept=".pdf,.png,.jpg,.jpeg" onchange="handleResumeUpload(this)">
+
+                <h2 class="panel-title">🎯 目标岗位 {% if mode == 'seeker' %}<span style="font-weight:400;font-size:0.85rem;color:var(--text-secondary)">(支持多个)</span>{% endif %}</h2>
+                <div id="jdContainer"></div>
+                {% if mode == 'seeker' %}
+                <button class="add-jd-btn" onclick="addJdItem()">
+                    <span>+</span> 添加岗位
+                </button>
+                {% endif %}
+
+                <div class="btn-group">
+                    {% if mode == 'seeker' %}
+                    <button class="btn btn-primary btn-full" id="parseBtn" onclick="parseDocuments()">
+                        📄 解析
+                    </button>
+                    <button class="btn btn-primary btn-full" onclick="matchJobs()" id="matchBtn" disabled>
+                        🎯 岗位匹配
+                    </button>
+                    {% else %}
+                    <button class="btn btn-primary btn-full" id="strategyBtn" onclick="generateStrategy()">
+                        ⚔️ 生成面试策略
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 右侧结果面板 -->
+            <div class="panel result-panel" id="resultPanel">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">{{ '📊' if mode == 'seeker' else '⚔️' }}</div>
+                    <div>上传简历和JD后，点击「解析」</div>
+                </div>
+                <div id="parsedResult" style="display:none"></div>
+                <div id="matchResults" style="display:none"></div>
+                <div id="interviewPrep" style="display:none"></div>
+                <div id="errorDisplay" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let resumeData = null;
+        let jdDataList = [];
+        let matchResults = [];
+        let matchReport = null;
+        let currentMatch = null;
+        let interviewData = null;
+        let chatHistory = [];
+        let currentQuestionIdx = 0;
+        let jdCounter = 0;
+
+        // 初始化：添加一个JD输入框
+        addJdItem();
+
+        function addJdItem() {
+            jdCounter++;
+            const container = document.getElementById('jdContainer');
+            const div = document.createElement('div');
+            div.className = 'jd-item';
+            div.id = `jd-${jdCounter}`;
+            div.innerHTML = `
+                <div class="jd-item-header">
+                    <span class="jd-item-title">岗位 ${jdCounter}</span>
+                    <button class="jd-remove" onclick="removeJdItem(${jdCounter})">✕</button>
+                </div>
+                <div class="upload-area" onclick="this.querySelector('.file-input').click()">
+                    <div class="upload-text">上传JD图片</div>
+                    <div class="upload-filename jd-filename"></div>
+                    <input type="file" class="file-input jd-file" accept=".png,.jpg,.jpeg,.pdf" onchange="handleJdUpload(this)">
+                </div>
+                <textarea class="form-textarea jd-text" placeholder="或粘贴JD文本..."></textarea>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeJdItem(id) {
+            const item = document.getElementById(`jd-${id}`);
+            if (item) {
+                item.remove();
+            }
+        }
+
+        function handleResumeUpload(input) {
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                document.getElementById('resumeFilename').textContent = '✅ ' + file.name;
+                document.getElementById('resumeUpload').classList.add('has-file');
+                document.getElementById('resumeUpload').classList.remove('error');
+            }
+        }
+
+        function handleJdUpload(input) {
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                const container = input.closest('.upload-area');
+                container.querySelector('.jd-filename').textContent = '✅ ' + file.name;
+                container.classList.add('has-file');
+            }
+        }
+
+        function showError(message, details = '', solution = '') {
+            const container = document.getElementById('errorDisplay');
+            container.style.display = 'block';
+            container.innerHTML = `
+                <div class="error-box">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                        <span style="font-size:1.2rem">❌</span>
+                        <strong style="color:#ff6666">错误</strong>
+                    </div>
+                    <div style="margin-bottom:0.5rem">${message}</div>
+                    ${details ? `<div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem">${details}</div>` : ''}
+                    ${solution ? `
+                        <div style="background:rgba(0,102,255,0.1);border-radius:8px;padding:0.75rem;margin-top:0.5rem">
+                            <div style="font-weight:600;color:#0066ff;margin-bottom:0.3rem">💡 解决方案</div>
+                            <div style="color:var(--text-secondary);font-size:0.9rem;white-space:pre-line">${solution}</div>
+                        </div>
+                    ` : ''}
+                </div>
+                <div style="display:flex;gap:0.5rem;margin-top:1rem">
+                    <button class="btn btn-secondary" onclick="hideError()" style="flex:1">关闭</button>
+                    <button class="btn btn-primary" onclick="retryLastAction()" style="flex:1">🔄 重试</button>
+                </div>
+            `;
+            // 隐藏其他内容
+            document.getElementById('parsedResult').style.display = 'none';
+            document.getElementById('matchResults').style.display = 'none';
+            document.getElementById('interviewPrep').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('errorDisplay').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+
+        function retryLastAction() {
+            hideError();
+            // 根据当前页面状态重试
+            if (typeof prepareInterview === 'function' && document.getElementById('prepareBtn')) {
+                prepareInterview();
+            } else if (typeof parseDocuments === 'function' && document.getElementById('parseBtn')) {
+                parseDocuments();
+            }
+        }
+
+        function showLoading(containerId, message = '处理中...') {
+            const container = document.getElementById(containerId);
+            container.style.display = 'block';
+            container.innerHTML = `<div class="loading"><div class="spinner"></div><div>${message}</div></div>`;
+        }
+
+        function showProgress(containerId) {
+            const container = document.getElementById(containerId);
+            container.style.display = 'block';
+            container.innerHTML = '<div class="progress-chain" id="progressChain"></div>';
+        }
+
+        function addProgressStep(text, status = 'loading') {
+            const chain = document.getElementById('progressChain');
+            if (!chain) return;
+            
+            const step = document.createElement('div');
+            step.className = `progress-step ${status}`;
+            step.innerHTML = `
+                <div class="progress-icon">${status === 'done' ? '✅' : status === 'error' ? '❌' : '<div class="spinner-small"></div>'}</div>
+                <div class="progress-text">${text}</div>
+            `;
+            chain.appendChild(step);
+            step.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return step;
+        }
+
+        function completeLastStep(text) {
+            const chain = document.getElementById('progressChain');
+            if (!chain) return;
+            
+            const lastStep = chain.lastElementChild;
+            if (lastStep) {
+                lastStep.className = 'progress-step done';
+                lastStep.querySelector('.progress-icon').innerHTML = '✅';
+                if (text) {
+                    lastStep.querySelector('.progress-text').textContent = text;
+                }
+            }
+        }
+
+        async function addSequentialStep(text, duration = 1000) {
+            const step = addProgressStep(text, 'loading');
+            await new Promise(r => setTimeout(r, duration));
+            step.className = 'progress-step done';
+            step.querySelector('.progress-icon').innerHTML = '✅';
+            return step;
+        }
+
+        function hideLoading(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+        }
+
+        async function parseDocuments() {
+            const resumeFile = document.getElementById('resumeFile').files[0];
+            if (!resumeFile) {
+                showError('请上传简历');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+
+            const jdItems = document.querySelectorAll('.jd-item');
+            let hasJd = false;
+
+            jdItems.forEach(item => {
+                const fileInput = item.querySelector('.jd-file');
+                const textInput = item.querySelector('.jd-text');
+
+                if (fileInput.files[0]) {
+                    formData.append('jd_files', fileInput.files[0]);
+                    hasJd = true;
+                }
+                if (textInput.value.trim()) {
+                    formData.append('jd_texts', textInput.value.trim());
+                    hasJd = true;
+                }
+            });
+
+            if (!hasJd) {
+                showError('请至少添加一个岗位JD');
+                return;
+            }
+
+            // 禁用按钮
+            document.getElementById('parseBtn').disabled = true;
+            document.getElementById('matchBtn').disabled = true;
+
+            hideError();
+            document.getElementById('emptyState').style.display = 'none';
+            showProgress('parsedResult');
+
+            try {
+                // 步骤1：解析简历
+                await addSequentialStep('正在解析候选人简历...', 1000);
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+                addProgressStep('正在调用MinerU提取文本...', 'loading');
+
+                const response = await fetch('/api/parse', {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `HTTP ${response.status}: 请求失败`);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                resumeData = data.resume;
+                jdDataList = data.jds;
+
+                // 完成MinerU步骤
+                completeLastStep('文本提取完成');
+                await new Promise(r => setTimeout(r, 300));
+
+                if (jdDataList.length === 0) {
+                    throw new Error('所有JD解析失败，请检查JD内容');
+                }
+
+                // 步骤2：解析JD
+                for (let i = 0; i < jdDataList.length; i++) {
+                    await addSequentialStep(`正在解析岗位 ${i+1}/${jdDataList.length}: ${jdDataList[i].company}...`, 500);
+                }
+
+                // 步骤3：完成
+                await addSequentialStep('解析完成', 500);
+
+                renderParsedResult();
+                document.getElementById('matchBtn').disabled = false;
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showError(
+                        '请求超时',
+                        '服务器响应时间过长',
+                        '1. 检查网络连接是否正常\n2. 稍后重试\n3. 如果问题持续，尝试使用更小的文件'
+                    );
+                } else {
+                    // 解析错误信息，尝试提取解决方案
+                    const errorMsg = error.message || '未知错误';
+                    let solution = '';
+                    
+                    if (errorMsg.includes('MinerU')) {
+                        solution = '1. MinerU服务可能繁忙，请稍后重试\n2. 尝试使用更清晰的图片\n3. 或使用PDF格式';
+                    } else if (errorMsg.includes('文件格式')) {
+                        solution = '请上传PDF、PNG、JPG或TXT格式的文件';
+                    } else if (errorMsg.includes('过大')) {
+                        solution = '请上传小于10MB的文件，或压缩图片后重试';
+                    } else {
+                        solution = '1. 检查文件是否损坏\n2. 尝试重新上传\n3. 如果问题持续，请联系支持';
+                    }
+                    
+                    showError('解析失败', errorMsg, solution);
+                }
+            } finally {
+                document.getElementById('parseBtn').disabled = false;
+            }
+        }
+
+        function renderParsedResult() {
+            const container = document.getElementById('parsedResult');
+            const emptyState = document.getElementById('emptyState');
+            const errorDisplay = document.getElementById('errorDisplay');
+            emptyState.style.display = 'none';
+            errorDisplay.style.display = 'none';
+            container.style.display = 'block';
+
+            let html = `
+                <div class="card card-highlight">
+                    <div style="margin-bottom:1rem">
+                        <div style="font-size:1.3rem;font-weight:700;color:#fff">${resumeData.name}</div>
+                        <div style="color:rgba(255,255,255,0.7)">${resumeData.education.school} · ${resumeData.education.major}</div>
+                    </div>
+                    <div style="margin-top:1rem">
+                        <div style="font-weight:600;margin-bottom:0.5rem">技能:</div>
+                        ${resumeData.skills.slice(0, 8).map(s => `<span class="tag tag-match">✓ ${s}</span>`).join('')}
+                    </div>
+                    <div style="margin-top:1rem;color:rgba(255,255,255,0.7)">项目: ${resumeData.projects.length}个</div>
+                </div>
+            `;
+
+            jdDataList.forEach((jd, i) => {
+                const must = jd.requirements.must_have.slice(0, 4).map(r => r.skill).join(', ');
+                html += `
+                    <div class="card">
+                        <div>
+                            <div style="font-weight:600;color:#fff">岗位${i+1}: ${jd.company}</div>
+                            <div style="color:rgba(255,255,255,0.7)">${jd.position} · ${jd.location}</div>
+                        </div>
+                        <div style="margin-top:1rem">
+                            <div style="font-weight:500;margin-bottom:0.5rem">必须:</div>
+                            ${must}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '<div class="success-box">✅ 解析完成，点击「🎯 岗位匹配」开始匹配分析</div>';
+            container.innerHTML = html;
+        }
+
+        async function matchJobs() {
+            if (!resumeData || jdDataList.length === 0) {
+                showError('请先解析简历和JD');
+                return;
+            }
+
+            document.getElementById('matchBtn').disabled = true;
+            hideError();
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('parsedResult').style.display = 'none';
+            showProgress('matchResults');
+
+            try {
+                // 步骤1：启动分析
+                await addSequentialStep('正在启动多Agent匹配分析...', 800);
+
+                // 步骤2：逐个分析岗位
+                for (let i = 0; i < jdDataList.length; i++) {
+                    const jd = jdDataList[i];
+                    await addSequentialStep(`正在分析岗位 ${i+1}/${jdDataList.length}: ${jd.company} - ${jd.position}...`, 1000);
+                }
+
+                // 步骤3：生成报告
+                await addSequentialStep('正在生成综合分析报告...', 1200);
+
+                // 步骤4：调用API
+                addProgressStep('正在获取匹配结果...', 'loading');
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 600000);
+
+                const response = await fetch('/api/match', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ resume: resumeData, jds: jdDataList }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || '匹配失败');
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    matchReport = data.result;
+                    matchResults = (matchReport.ranked_results || []).map(r => {
+                        const jd = jdDataList.find(j => j.company === r.company && j.position === r.position) || jdDataList[0];
+                        return { ...r, jd: jd };
+                    });
+
+                    // 完成最后一步
+                    completeLastStep('匹配结果获取完成');
+                    
+                    // 显示完成信息
+                    const totalJds = jdDataList.length;
+                    const matchedCount = matchResults.length;
+                    const failedCount = totalJds - matchedCount;
+                    
+                    if (failedCount > 0) {
+                        addProgressStep(`✅ 匹配完成: ${matchedCount}/${totalJds} 个岗位成功`, 'done');
+                        addProgressStep(`⚠️ ${failedCount} 个岗位匹配失败`, 'error');
+                    } else {
+                        addProgressStep(`✅ 共分析 ${matchedCount} 个岗位`, 'done');
+                    }
+
+                    await new Promise(r => setTimeout(r, 800));
+
+                    renderMatchResults();
+                } else {
+                    throw new Error(data.error || '匹配失败');
+                }
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showError('请求超时', '匹配分析超时，请稍后重试');
+                } else {
+                    showError('匹配失败', error.message);
+                }
+            } finally {
+                document.getElementById('matchBtn').disabled = false;
+            }
+        }
+
+        async function generateStrategy() {
+            const resumeFile = document.getElementById('resumeFile').files[0];
+            if (!resumeFile) {
+                showError('请上传简历');
+                return;
+            }
+
+            const jdItems = document.querySelectorAll('.jd-item');
+            let hasJd = false;
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+
+            jdItems.forEach(item => {
+                const fileInput = item.querySelector('.jd-file');
+                const textInput = item.querySelector('.jd-text');
+
+                if (fileInput.files[0]) {
+                    formData.append('jd_files', fileInput.files[0]);
+                    hasJd = true;
+                }
+                if (textInput.value.trim()) {
+                    formData.append('jd_texts', textInput.value.trim());
+                    hasJd = true;
+                }
+            });
+
+            if (!hasJd) {
+                showError('请上传JD');
+                return;
+            }
+
+            document.getElementById('strategyBtn').disabled = true;
+            hideError();
+            document.getElementById('emptyState').style.display = 'none';
+            showProgress('interviewPrep');
+
+            try {
+                // 步骤1：解析简历
+                await addSequentialStep('正在解析候选人简历...', 1000);
+
+                addProgressStep('正在调用MinerU提取文本...', 'loading');
+
+                const parseResp = await fetch('/api/parse', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!parseResp.ok) {
+                    const err = await parseResp.json().catch(() => ({}));
+                    throw new Error(err.error || '解析失败');
+                }
+
+                const parseData = await parseResp.json();
+                if (!parseData.success) {
+                    throw new Error(parseData.error || '解析失败');
+                }
+
+                resumeData = parseData.resume;
+                jdDataList = parseData.jds;
+
+                // 完成MinerU步骤
+                completeLastStep(`简历解析完成: ${resumeData.name}`);
+                await new Promise(r => setTimeout(r, 300));
+
+                // 步骤2：分析岗位
+                await addSequentialStep(`正在分析岗位要求: ${jdDataList[0].company} - ${jdDataList[0].position}...`, 800);
+
+                // 步骤3：设计面试问题
+                await addSequentialStep('正在设计面试问题...', 1000);
+
+                // 步骤4：生成面试策略
+                addProgressStep('正在生成面试策略...', 'loading');
+
+                const strategyResp = await fetch('/api/interview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        resume: resumeData,
+                        jd: jdDataList[0],
+                        mode: 'spear'
+                    })
+                });
+
+                if (!strategyResp.ok) {
+                    const err = await strategyResp.json().catch(() => ({}));
+                    throw new Error(err.error || '生成失败');
+                }
+
+                const strategyData = await strategyResp.json();
+                if (strategyData.success) {
+                    interviewData = strategyData.result;
+
+                    // 完成最后一步
+                    completeLastStep('面试策略生成完成');
+                    await new Promise(r => setTimeout(r, 300));
+
+                    // 显示完成信息
+                    addProgressStep('✅ 生成完成', 'done');
+
+                    await new Promise(r => setTimeout(r, 500));
+
+                    renderInterviewStrategy();
+                } else {
+                    throw new Error(strategyData.error || '生成失败');
+                }
+
+            } catch (error) {
+                showError('生成失败', error.message);
+            } finally {
+                document.getElementById('strategyBtn').disabled = false;
+            }
+        }
+
+        function renderInterviewStrategy() {
+            const container = document.getElementById('interviewPrep');
+            container.style.display = 'block';
+            document.getElementById('parsedResult').style.display = 'none';
+            document.getElementById('matchResults').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+
+            const questions = interviewData.questions || [];
+            const strategy = interviewData.interview_strategy || '';
+
+            let html = `
+                <div style="margin-bottom:2rem">
+                    <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#00ff87,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem">⚔️ 面试策略</h2>
+                    <p style="color:rgba(255,255,255,0.7)">${resumeData ? resumeData.name : ''} → ${jdDataList[0] ? jdDataList[0].company + ' - ' + jdDataList[0].position : ''}</p>
+                </div>
+                <button class="btn btn-secondary" onclick="backToUpload()" style="margin-bottom:1.5rem">← 重新上传</button>
+                <div class="divider"></div>
+            `;
+
+            if (strategy) {
+                html += `
+                    <div style="margin-bottom:1.5rem;padding:1.5rem;background:rgba(0,102,255,0.1);border-radius:16px;border-left:4px solid #0066ff">
+                        <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem">📋 整体策略</div>
+                        <div style="color:var(--text-secondary);line-height:1.6">${strategy}</div>
+                    </div>
+                `;
+            }
+
+            if (questions.length > 0) {
+                questions.forEach((q, i) => {
+                    html += `
+                        <div class="card" style="margin-bottom:1.5rem">
+                            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+                                <div style="background:linear-gradient(135deg,#00ff87,#0066ff);color:#0a0a1a;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700">Q${i+1}</div>
+                                <div style="font-weight:700;color:#fff;font-size:1.1rem;flex:1">${q.question || ''}</div>
+                            </div>
+                            
+                            ${q.why_ask ? `
+                                <div style="margin-bottom:1rem;padding:1rem;background:rgba(0,255,135,0.08);border-radius:12px;border-left:3px solid #00ff87">
+                                    <div style="font-weight:600;color:#00ff87;margin-bottom:0.3rem">🎯 为什么要问</div>
+                                    <div style="color:var(--text-secondary)">${q.why_ask}</div>
+                                </div>
+                            ` : ''}
+                            
+                            ${q.key_points && q.key_points.length > 0 ? `
+                                <div style="margin-bottom:1rem">
+                                    <div style="font-weight:600;color:#0066ff;margin-bottom:0.5rem">📝 回答要点</div>
+                                    <ul style="list-style:none;padding:0">
+                                        ${q.key_points.map(p => `<li style="padding:0.3rem 0;color:var(--text-secondary)">• ${p}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${q.what_it_reveals ? `
+                                <div style="margin-bottom:1rem;padding:1rem;background:rgba(0,102,255,0.08);border-radius:12px;border-left:3px solid #0066ff">
+                                    <div style="font-weight:600;color:#0066ff;margin-bottom:0.3rem">💡 能揭示什么能力</div>
+                                    <div style="color:var(--text-secondary)">${q.what_it_reveals}</div>
+                                </div>
+                            ` : ''}
+                            
+                            ${q.red_flags && q.red_flags.length > 0 ? `
+                                <div style="padding:1rem;background:rgba(255,68,68,0.08);border-radius:12px;border-left:3px solid #ff4444">
+                                    <div style="font-weight:600;color:#ff6666;margin-bottom:0.3rem">🚩 红旗信号</div>
+                                    <ul style="list-style:none;padding:0">
+                                        ${q.red_flags.map(f => `<li style="padding:0.3rem 0;color:var(--text-secondary)">• ${f}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = html;
+        }
+
+        function backToUpload() {
+            document.getElementById('interviewPrep').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+
+        function updateLoadingMessage(containerId, message) {
+            const container = document.getElementById(containerId);
+            const loadingDiv = container.querySelector('.loading div:last-child');
+            if (loadingDiv) {
+                loadingDiv.textContent = message;
+            }
+        }
+
+        function renderMatchResults() {
+            const container = document.getElementById('matchResults');
+            container.style.display = 'block';
+            document.getElementById('parsedResult').style.display = 'none';
+
+            let html = '';
+            
+            // 显示综合分析
+            if (matchReport && matchReport.overall_summary) {
+                html += `
+                    <div style="margin-bottom:1.5rem;padding:1.5rem;background:rgba(0,102,255,0.1);border-radius:16px;border-left:4px solid #0066ff">
+                        <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem">📊 综合分析</div>
+                        <div style="color:var(--text-secondary);line-height:1.6">${matchReport.overall_summary}</div>
+                    </div>
+                `;
+            }
+
+            // 显示匹配统计
+            const totalJds = jdDataList.length;
+            const matchedCount = matchResults.length;
+            const failedCount = totalJds - matchedCount;
+            
+            if (failedCount > 0) {
+                html += `<div class="warn-box" style="background:rgba(255,170,0,0.1);border-left:3px solid #ffaa00;padding:1rem;border-radius:0 12px 12px 0;margin-bottom:1rem">
+                    <strong>⚠️ 匹配统计:</strong> ${matchedCount}/${totalJds} 个岗位匹配成功，${failedCount} 个岗位匹配失败
+                </div>`;
+            } else {
+                html += '<div class="success-box">✅ 匹配完成，共分析 ' + matchedCount + ' 个岗位</div>';
+            }
+
+            matchResults.forEach((r, i) => {
+                const score = r.score || 0;
+                const color = score >= 80 ? '#00ff87' : score >= 60 ? '#ffaa00' : '#ff4444';
+                const label = score >= 90 ? '高度匹配' : score >= 70 ? '较好匹配' : score >= 50 ? '一般匹配' : '匹配度低';
+                const rank = r.rank || (i + 1);
+
+                html += `
+                    <div class="card" style="margin-bottom:1.5rem">
+                        <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:1.5rem">
+                            <div style="background:linear-gradient(135deg,#00ff87,#0066ff);color:#0a0a1a;width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem">${rank}</div>
+                            <div style="flex:1">
+                                <div style="font-weight:700;color:#fff;font-size:1.2rem">${r.company || ''}</div>
+                                <div style="color:rgba(255,255,255,0.7);margin-top:0.3rem">${r.position || ''} · ${r.location || ''}</div>
+                            </div>
+                            <div style="text-align:right">
+                                <div class="score-big" style="font-size:3rem">${score}</div>
+                                <div style="color:${color};font-weight:600;font-size:1.1rem">${label}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="score-bar" style="margin-bottom:1.5rem"><div class="score-fill" style="width:${score}%"></div></div>
+                        
+                        ${r.summary ? `
+                            <div style="margin-bottom:1rem;padding:1rem;background:rgba(255,255,255,0.03);border-radius:12px">
+                                <div style="font-weight:600;margin-bottom:0.5rem">📝 总结</div>
+                                <div style="color:var(--text-secondary)">${r.summary}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${r.matched && r.matched.length > 0 ? `
+                            <div style="margin-bottom:1rem">
+                                <div style="font-weight:600;color:#00ff87;margin-bottom:0.5rem">✅ 匹配项</div>
+                                <ul style="list-style:none;padding:0">
+                                    ${r.matched.map(m => `<li style="padding:0.3rem 0;color:var(--text-secondary)">• ${m}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        ${r.unmatched && r.unmatched.length > 0 ? `
+                            <div style="margin-bottom:1rem">
+                                <div style="font-weight:600;color:#ff6666;margin-bottom:0.5rem">❌ 不匹配项</div>
+                                <ul style="list-style:none;padding:0">
+                                    ${r.unmatched.map(m => `<li style="padding:0.3rem 0;color:var(--text-secondary)">• ${m}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        ${r.optimization && r.optimization.length > 0 ? `
+                            <div style="margin-bottom:1rem">
+                                <div style="font-weight:600;color:#ffaa00;margin-bottom:0.5rem">💡 简历优化建议</div>
+                                <ul style="list-style:none;padding:0">
+                                    ${r.optimization.map(m => `<li style="padding:0.3rem 0;color:var(--text-secondary)">• ${m}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        <button class="btn btn-primary btn-full" style="margin-top:1rem" onclick="startInterview(${i})">
+                            {{ '🛡️ 面试准备' if mode == 'seeker' else '⚔️ 验证出题' }}
+                        </button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function startInterview(idx) {
+            currentMatch = matchResults[idx];
+            showProgress('interviewPrep');
+
+            try {
+                // 步骤1：分析匹配结果
+                await addSequentialStep('正在分析匹配结果...', 800);
+
+                // 步骤2：生成自我介绍
+                await addSequentialStep('正在生成自我介绍...', 1000);
+
+                // 步骤3：调用API
+                addProgressStep('正在生成面试题库...', 'loading');
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+                const response = await fetch('/api/interview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        resume: resumeData,
+                        jd: currentMatch.jd,
+                        match_result: currentMatch,
+                        mode: '{{ mode }}' === 'seeker' ? 'shield' : 'spear'
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || '生成失败');
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    interviewData = data.result;
+
+                    // 完成最后一步
+                    completeLastStep('面试题库生成完成');
+                    await new Promise(r => setTimeout(r, 300));
+
+                    // 显示完成信息
+                    addProgressStep('✅ 生成完成', 'done');
+
+                    await new Promise(r => setTimeout(r, 500));
+
+                    renderInterviewPrep();
+                } else {
+                    throw new Error(data.error || '生成失败');
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showError('请求超时', '生成面试准备超时，请稍后重试');
+                } else {
+                    showError('生成失败', error.message);
+                }
+            }
+        }
+
+        function renderInterviewPrep() {
+            const container = document.getElementById('interviewPrep');
+            container.style.display = 'block';
+            document.getElementById('matchResults').style.display = 'none';
+
+            const intro = interviewData.self_intro || {};
+            const questions = interviewData.questions || [];
+
+            let html = `
+                <div style="margin-bottom:2rem">
+                    <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#00ff87,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem">{{ '🛡️ 面试准备' if mode == 'seeker' else '⚔️ 验证出题' }}</h2>
+                    <p style="color:rgba(255,255,255,0.7)">${currentMatch.company} · ${currentMatch.position}</p>
+                </div>
+                <button class="btn btn-secondary" onclick="backToMatch()" style="margin-bottom:1.5rem">← 返回匹配结果</button>
+                <div class="divider"></div>
+
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(0, this)">📝 自我介绍</button>
+                    <button class="tab" onclick="switchTab(1, this)">❓ 面试题库</button>
+                    <button class="tab" onclick="switchTab(2, this)">💬 模拟面试</button>
+                </div>
+
+                <div class="tab-content active" id="tab-0">
+                    <div class="card">
+                        <div style="font-weight:600;margin-bottom:0.5rem">📄 自我介绍</div>
+                        <div>${intro.formal || '暂无'}</div>
+                    </div>
+                    ${intro.key_points && intro.key_points.length > 0 ? `
+                        <div style="margin-top:1rem">
+                            <div style="font-weight:600;margin-bottom:0.5rem">🎯 关键数据点</div>
+                            ${intro.key_points.map(p => `<div class="info-box">${p}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="tab-content" id="tab-1">
+                    ${questions.length > 0 ? questions.map((q, i) => `
+                        <div class="question-card">
+                            <div class="question-header" onclick="toggleQuestion(this)">
+                                <span>Q${i+1}: ${(q.question || '').substring(0, 60)}...</span>
+                                <span>▼</span>
+                            </div>
+                            <div class="question-body">
+                                <div><strong>问题:</strong> ${q.question || ''}</div>
+                                <div><strong>🛡️ 面试官意图:</strong> ${q.intent || ''}</div>
+                                <div style="margin-top:0.5rem"><strong>💡 参考答案:</strong></div>
+                                <div class="card">${q.answer || ''}</div>
+                                ${q.follow_ups && q.follow_ups.length > 0 ? `
+                                    <div style="margin-top:0.5rem"><strong>🔄 追问链:</strong></div>
+                                    ${q.follow_ups.map((fu, j) => `<div>${j+1}. ${fu}</div>`).join('')}
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('') : '<div class="warning-box">暂无面试题</div>'}
+                </div>
+
+                <div class="tab-content" id="tab-2">
+                    <div class="info-box" id="currentQuestion">
+                        <strong>当前问题:</strong> ${questions[0] ? questions[0].question : '请先生成题目'}
+                    </div>
+                    <div class="chat-container" id="chatContainer"></div>
+                    <div class="chat-input-group">
+                        <textarea class="form-textarea chat-input" id="chatInput" placeholder="输入你的回答..."></textarea>
+                        <button class="btn btn-primary" onclick="sendAnswer()">📤 发送</button>
+                        <button class="btn btn-secondary" onclick="nextQuestion()">⏭️ 下一题</button>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function switchTab(idx, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + idx).classList.add('active');
+        }
+
+        function toggleQuestion(header) {
+            header.nextElementSibling.classList.toggle('open');
+        }
+
+        function backToMatch() {
+            document.getElementById('interviewPrep').style.display = 'none';
+            document.getElementById('matchResults').style.display = 'block';
+        }
+
+        async function sendAnswer() {
+            const input = document.getElementById('chatInput');
+            const answer = input.value.trim();
+            if (!answer) return;
+
+            const questions = interviewData.questions || [];
+            const question = questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : '';
+
+            chatHistory.push({ role: 'user', content: answer });
+            renderChat('👤 你', answer, 'chat-user');
+            input.value = '';
+
+            try {
+                const response = await fetch('/api/mock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history: chatHistory,
+                        question: question,
+                        answer: answer,
+                        resume: resumeData,
+                        mode: '{{ mode }}' === 'seeker' ? 'shield' : 'spear'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const result = data.result;
+                    const scores = result.scores || {};
+                    
+                    // 构建回复内容
+                    let reply = `**📊 评分:** 技术深度 ${scores.technical_depth || 0} | 量化支撑 ${scores.quantitative_support || 0} | 逻辑清晰 ${scores.logical_clarity || 0} | 综合 ${result.overall || 0}\n\n`;
+                    
+                    // 反馈
+                    reply += `**💬 反馈:** ${result.feedback || ''}\n\n`;
+                    
+                    // 标准答案
+                    if (result.model_answer) {
+                        reply += `**✅ 标准答案:**\n${result.model_answer}\n\n`;
+                    }
+                    
+                    // 追问
+                    if (result.next_question) {
+                        reply += `**❓ 追问:** ${result.next_question}`;
+                    }
+
+                    chatHistory.push({ role: 'assistant', content: reply });
+                    renderChat('🤖 面试官', reply, 'chat-ai');
+                }
+            } catch (error) {
+                renderChat('🤖 系统', '请求失败，请重试', 'chat-ai');
+            }
+        }
+
+        function renderChat(name, content, cls) {
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.className = 'chat-msg ' + cls;
+            div.innerHTML = `<strong>${name}:</strong><br>${content.replace(/\n/g, '<br>')}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function nextQuestion() {
+            const questions = interviewData.questions || [];
+            currentQuestionIdx = (currentQuestionIdx + 1) % questions.length;
+            chatHistory = [];
+            document.getElementById('chatContainer').innerHTML = '';
+            document.getElementById('currentQuestion').innerHTML = `<strong>当前问题:</strong> ${questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : ''}`;
+        }
+    </script>
+</body>
+</html>

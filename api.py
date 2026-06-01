@@ -2,9 +2,14 @@
 import json
 import re
 import base64
+import os
 import requests
 import logging
 from typing import Dict, Any, Optional, Union, List
+from dotenv import load_dotenv
+
+# 直接加载环境变量
+load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
 
@@ -12,34 +17,36 @@ class APIError(Exception):
     """API调用异常"""
     pass
 
-def get_api_config():
-    """获取API配置"""
-    from config import API_BASE, MODEL, get_key
-    return API_BASE, MODEL, get_key()
+# API配置
+API_BASE = os.getenv("API_BASE", "https://api.xiaomimimo.com/v1")
+MODEL = os.getenv("MODEL", "mimo-v2.5-pro")
+API_KEY = os.getenv("MIMO_API_KEY", "")
 
 def api(messages: list, model: Optional[str] = None, json_mode: bool = False) -> Union[str, Dict[str, Any]]:
     """调用MiMo API，返回文本或解析后的dict"""
-    api_base, default_model, key = get_api_config()
-    
-    if not key:
+    if not API_KEY:
         raise APIError("未配置MIMO_API_KEY，请在.env文件或环境变量中设置")
 
     data = {
-        "model": model or default_model,
+        "model": model or MODEL,
         "messages": messages,
-        "temperature": 0.1,
-        "max_tokens": 4096
+        "max_completion_tokens": 4096,
+        "temperature": 0.1
     }
     if json_mode:
         data["response_format"] = {"type": "json_object"}
 
-    url = f"{api_base}/chat/completions"
-    headers = {"Content-Type": "application/json", "api-key": key}
+    url = f"{API_BASE}/chat/completions"
+    # 使用api-key头（官方文档指定）
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": API_KEY
+    }
 
     logger.debug(f"API请求: {url}, 模型: {data['model']}")
 
     try:
-        resp = requests.post(url, headers=headers, json=data, timeout=120)
+        resp = requests.post(url, headers=headers, json=data, timeout=300)
         resp.raise_for_status()
         content = resp.json()["choices"][0]["message"]["content"]
         
@@ -82,8 +89,9 @@ def extract_json(text: str) -> Dict[str, Any]:
     return {}
 
 def parse_image(file_bytes: bytes, prompt: str) -> Dict[str, Any]:
-    """图片转base64后调用API（用mimo-v2.5支持vision）"""
+    """图片转base64后调用API"""
     b64 = base64.b64encode(file_bytes).decode()
+    # 使用mimo-v2.5模型处理图片（根据官方文档）
     return api([
         {"role": "system", "content": "严格按JSON格式输出，不要添加其他文本。"},
         {"role": "user", "content": [

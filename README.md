@@ -1,107 +1,99 @@
-﻿# Offer Catcher (Offer捕手)
-
-AI求职智能匹配工具 - 求职者之盾 vs 面试官之矛
+﻿# Offer Catcher - AI求职智能匹配平台
 
 ## 功能特性
 
-- 📄 **简历解析**: 支持PDF、图片格式简历解析
-- 🎯 **JD解析**: 支持图片、文本格式职位描述解析
-- 📊 **匹配分析**: 智能分析简历与JD的匹配度
-- 🛡️ **求职者之盾**: 面试准备、自我介绍、面试题库
-- ⚔️ **面试官之矛**: 候选人验证、破绽识别、深度追问
+- 🎯 **智能岗位匹配** - 上传简历+多个JD，AI分析匹配度
+- 🛡️ **智能面试准备** - 上传简历+1个JD，生成面试题库
+- ⚔️ **候选人深度验证** - 面试官模式，生成面试策略
 
-## 安装
+## 快速开始
 
-1. 克隆项目
+### 本地运行
+
 ```bash
+# 1. 克隆项目
 git clone <repository-url>
 cd AIHR
-```
 
-2. 安装依赖
-```bash
+# 2. 安装依赖
 pip install -r requirements.txt
-```
 
-3. 配置API密钥
-```bash
-# 复制环境变量模板
+# 3. 配置环境变量
 cp .env.example .env
+# 编辑 .env 文件，填入API密钥
 
-# 编辑.env文件，添加API密钥
-MIMO_API_KEY=your-api-key-here
+# 4. 启动服务
+python server.py
+
+# 5. 访问应用
+# http://localhost:8080
 ```
 
-## 使用
+### Vercel部署
 
-1. 启动应用
+1. **推送到GitHub**
 ```bash
-streamlit run app.py
+git init
+git add .
+git commit -m "init"
+git remote add origin https://github.com/你的用户名/offer-catcher.git
+git push -u origin master
 ```
 
-2. 访问应用
-打开浏览器访问 `http://localhost:8501`
+2. **登录Vercel**
+- 访问 https://vercel.com
+- 用GitHub账号登录
 
-3. 使用流程
-- 选择模式（求职者/面试官）
-- 上传简历PDF/图片
-- 输入或上传目标JD
-- 点击解析 → 查看解析结果
-- 点击匹配 → 查看匹配排名
-- 点击岗位 → 进入面试准备/验证出题
+3. **导入项目**
+- 点击 "New Project"
+- 选择你的仓库
+- 配置：
+  - **Framework Preset:** Other
+  - **Build Command:** (留空)
+  - **Output Directory:** (留空)
+
+4. **添加环境变量**
+- 在Settings → Environment Variables中添加：
+  - `MIMO_API_KEY` = 你的MiMo API密钥
+  - `MINERU_API_KEY` = 你的MinerU API密钥
+
+5. **部署完成**
+- Vercel会自动部署
+- 提供公网链接：`https://你的项目名.vercel.app`
+
+## 技术栈
+
+- **后端:** Python + Flask
+- **前端:** HTML + CSS + JavaScript
+- **AI服务:** MinerU (文档解析) + MiMo (AI推理)
+- **缓存:** 文件缓存
 
 ## 项目结构
 
 ```
 AIHR/
-├── app.py              # 主入口，路由和状态管理
+├── server.py           # Flask主入口
 ├── api.py              # API调用层
 ├── parser.py           # 解析逻辑层
-├── ui.py               # 界面组件层
-├── config.py           # 配置管理层
-├── models.py           # 数据模型层
-├── .gitignore          # Git忽略文件
-├── requirements.txt    # 依赖管理
-├── README.md           # 项目文档
-└── tests/              # 测试目录
-    ├── test_api.py
-    ├── test_parser.py
-    └── test_models.py
+├── config.py           # 配置管理
+├── models.py           # 数据模型
+├── mineru_parser.py    # MinerU封装
+├── cache_manager.py    # 缓存管理
+├── api/index.py        # Vercel入口
+├── templates/          # Flask模板
+├── tests/              # 单元测试
+├── .env.example        # 环境变量示例
+├── vercel.json         # Vercel配置
+└── requirements.txt    # 依赖清单
 ```
 
-## 开发
+## API接口
 
-### 运行测试
-```bash
-pytest tests/ -v
-```
-
-### 代码风格
-```bash
-# 使用black格式化
-black .
-
-# 使用flake8检查
-flake8 .
-```
-
-## 配置
-
-### 环境变量
-- `MIMO_API_KEY`: MiMo API密钥
-- `API_BASE`: API基础URL（默认: https://token-plan-cn.xiaomimimo.com/v1）
-- `MODEL`: 使用的模型（默认: mimo-v2.5-pro）
-
-### Streamlit配置
-在 `.streamlit/secrets.toml` 中配置API密钥：
-```toml
-MIMO_API_KEY = "your-api-key-here"
-```
+- `POST /api/parse` - 解析简历和JD
+- `POST /api/match` - 匹配分析
+- `POST /api/interview` - 生成面试准备
+- `POST /api/mock` - 模拟面试追问
 
 ## 许可证
 
 MIT License
-
-## 贡献
-
-欢迎提交Issue和Pull Request！
