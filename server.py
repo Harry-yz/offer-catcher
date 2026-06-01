@@ -20,6 +20,9 @@ app = Flask(__name__,
             template_folder=os.path.join(BASE_DIR, 'templates'),
             static_folder=os.path.join(BASE_DIR, 'static'))
 
+# 设置最大内容长度 (16MB)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
 # 确保模板目录存在
 if not os.path.exists(os.path.join(BASE_DIR, 'templates')):
     os.makedirs(os.path.join(BASE_DIR, 'templates'), exist_ok=True)
@@ -177,9 +180,18 @@ def api_parse():
         jd_files = request.files.getlist('jd_files')
         jd_texts = request.form.getlist('jd_texts')
         
+        print(f"[DEBUG] 收到JD文件数量: {len(jd_files)}")
+        print(f"[DEBUG] 收到JD文本数量: {len(jd_texts)}")
+        
+        # 打印所有收到的表单数据
+        print(f"[DEBUG] 所有文件: {list(request.files.keys())}")
+        print(f"[DEBUG] 所有表单字段: {list(request.form.keys())}")
+        
         for i, jd_file in enumerate(jd_files):
+            print(f"[DEBUG] JD文件 {i}: {jd_file.filename if jd_file else 'None'}")
             if jd_file and jd_file.filename:
                 jd_bytes = jd_file.read()
+                print(f"[DEBUG] JD文件 {i} 大小: {len(jd_bytes)} bytes")
                 jd_wrapper = FileWrapper(jd_bytes, jd_file.filename)
                 jd = do_parse_jd(jd_wrapper)
                 if jd:
@@ -193,8 +205,12 @@ def api_parse():
                         },
                         'responsibilities': jd.responsibilities
                     })
+                    print(f"[DEBUG] JD {i} 解析成功: {jd.company} - {jd.position}")
+                else:
+                    print(f"[DEBUG] JD {i} 解析失败")
         
-        for jd_text in jd_texts:
+        for i, jd_text in enumerate(jd_texts):
+            print(f"[DEBUG] JD文本 {i}: {jd_text[:50] if jd_text else '空'}...")
             if jd_text and jd_text.strip():
                 jd = do_parse_jd(text_input=jd_text)
                 if jd:
@@ -208,9 +224,22 @@ def api_parse():
                         },
                         'responsibilities': jd.responsibilities
                     })
+                    print(f"[DEBUG] JD文本 {i} 解析成功: {jd.company} - {jd.position}")
+                else:
+                    print(f"[DEBUG] JD文本 {i} 解析失败")
+        
+        print(f"[DEBUG] 最终JD数量: {len(jds)}")
         
         if not jds:
-            return jsonify({'error': '请至少上传一个JD（图片或文本）'}), 400
+            return jsonify({
+                'error': '请至少上传一个JD（图片或文本）',
+                'debug': {
+                    'jd_files_count': len(jd_files),
+                    'jd_texts_count': len(jd_texts),
+                    'file_keys': list(request.files.keys()),
+                    'form_keys': list(request.form.keys())
+                }
+            }), 400
         
         resume_data = {
             'name': resume.name,
