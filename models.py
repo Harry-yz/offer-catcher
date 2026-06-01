@@ -7,6 +7,9 @@ class Education:
     school: str = ""
     major: str = ""
     degree: str = ""
+    gpa: str = ""
+    start_date: str = ""
+    end_date: str = ""
 
 @dataclass
 class Project:
@@ -16,11 +19,47 @@ class Project:
     technologies: List[str] = field(default_factory=list)
 
 @dataclass
+class Internship:
+    company: str = ""
+    position: str = ""
+    duration: str = ""
+    description: str = ""
+    key_achievements: List[str] = field(default_factory=list)
+
+@dataclass
+class WorkExperience:
+    company: str = ""
+    position: str = ""
+    duration: str = ""
+    description: str = ""
+    key_achievements: List[str] = field(default_factory=list)
+
+@dataclass
+class Certificate:
+    name: str = ""
+    issuer: str = ""
+    date: str = ""
+
+@dataclass
+class Award:
+    name: str = ""
+    date: str = ""
+    description: str = ""
+
+@dataclass
 class Resume:
     name: str = ""
+    phone: str = ""
+    email: str = ""
+    location: str = ""
     education: Education = field(default_factory=Education)
-    skills: List[str] = field(default_factory=list)
+    work_experience: List[WorkExperience] = field(default_factory=list)
+    internships: List[Internship] = field(default_factory=list)
     projects: List[Project] = field(default_factory=list)
+    skills: List[str] = field(default_factory=list)
+    certificates: List[Certificate] = field(default_factory=list)
+    awards: List[Award] = field(default_factory=list)
+    self_evaluation: str = ""
 
 @dataclass
 class Requirement:

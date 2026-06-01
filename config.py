@@ -32,9 +32,71 @@ def get_key():
 # ============================================================
 # 解析提示词
 # ============================================================
-PARSE_RESUME_PROMPT = """从以下内容提取简历结构化信息，严格JSON输出：
-{"name":"姓名","education":{"school":"","major":"","degree":""},"skills":["技能1"],"projects":[{"name":"","description":"","key_achievements":["成果1"],"technologies":["技术1"]}]}
-关键成果必须保留原始量化数据（40%、87.3%等）。"""
+PARSE_RESUME_PROMPT = """从以下内容提取简历结构化信息，严格JSON输出。
+
+要求：
+1. 提取所有能找到的信息，字段可以为空但不能遗漏
+2. 关键成果必须保留原始量化数据（40%、87.3%等）
+3. 技能要去重
+4. 时间格式统一为"YYYY.MM"或"YYYY.MM-YYYY.MM"
+
+JSON格式：
+{
+  "name": "姓名",
+  "phone": "电话",
+  "email": "邮箱",
+  "location": "所在城市",
+  "education": {
+    "school": "学校",
+    "major": "专业",
+    "degree": "学历（本科/硕士/博士）",
+    "gpa": "绩点（如有）",
+    "start_date": "开始时间",
+    "end_date": "结束时间"
+  },
+  "work_experience": [
+    {
+      "company": "公司名",
+      "position": "职位",
+      "duration": "2023.01-2024.01",
+      "description": "工作描述",
+      "key_achievements": ["成就1：具体数据"]
+    }
+  ],
+  "internships": [
+    {
+      "company": "公司名",
+      "position": "职位",
+      "duration": "2023.01-2024.01",
+      "description": "实习描述",
+      "key_achievements": ["成就1"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "项目名",
+      "description": "项目描述",
+      "key_achievements": ["成就1：具体数据"],
+      "technologies": ["技术1", "技术2"]
+    }
+  ],
+  "skills": ["技能1", "技能2"],
+  "certificates": [
+    {
+      "name": "证书名称",
+      "issuer": "颁发机构",
+      "date": "获得时间"
+    }
+  ],
+  "awards": [
+    {
+      "name": "奖项名称",
+      "date": "获得时间",
+      "description": "奖项描述"
+    }
+  ],
+  "self_evaluation": "自我评价内容"
+}"""
 
 PARSE_JD_PROMPT = """从以下内容提取岗位JD结构化信息，严格JSON输出：
 {"company":"","position":"","location":"","requirements":{"must_have":[{"skill":"","importance":"高"}],"nice_to_have":[{"skill":"","importance":"中"}]},"responsibilities":["职责1"]}

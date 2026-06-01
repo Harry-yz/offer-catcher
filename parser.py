@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from typing import Dict, Any, Optional, List
-from models import Resume, JobDescription, Education, Project, Requirements, Requirement
+from models import Resume, JobDescription, Education, Project, Internship, WorkExperience, Certificate, Award, Requirements, Requirement
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,6 @@ def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
     
     # 解析教育背景
     edu_data = data.get("education", {})
-    # 处理education是列表的情况
     if isinstance(edu_data, list) and len(edu_data) > 0:
         edu_data = edu_data[0]
     elif not isinstance(edu_data, dict):
@@ -62,8 +61,28 @@ def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
     education = Education(
         school=edu_data.get("school", ""),
         major=edu_data.get("major", ""),
-        degree=edu_data.get("degree", "")
+        degree=edu_data.get("degree", ""),
+        gpa=edu_data.get("gpa", ""),
+        start_date=edu_data.get("start_date", ""),
+        end_date=edu_data.get("end_date", "")
     )
+    
+    # 解析工作经历
+    work_experience = []
+    for work_data in data.get("work_experience", []):
+        work_text = work_data.get("description", "")
+        achievements = work_data.get("key_achievements", [])
+        if not achievements:
+            achievements = extract_achievements(work_text)
+        
+        work = WorkExperience(
+            company=work_data.get("company", ""),
+            position=work_data.get("position", ""),
+            duration=work_data.get("duration", ""),
+            description=work_text,
+            key_achievements=achievements
+        )
+        work_experience.append(work)
     
     # 解析项目经历
     projects = []
@@ -90,22 +109,69 @@ def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
         )
         projects.append(project)
     
+    # 解析实习经历
+    internships = []
+    for intern_data in data.get("internships", []):
+        intern_text = intern_data.get("description", "")
+        achievements = intern_data.get("key_achievements", [])
+        if not achievements:
+            achievements = extract_achievements(intern_text)
+        
+        internship = Internship(
+            company=intern_data.get("company", ""),
+            position=intern_data.get("position", ""),
+            duration=intern_data.get("duration", ""),
+            description=intern_text,
+            key_achievements=achievements
+        )
+        internships.append(internship)
+    
     # 解析技能
     skills = data.get("skills", [])
     if isinstance(skills, str):
         skills = [s.strip() for s in skills.split(",")]
     
-    # 从项目描述中提取额外技能
-    all_project_text = " ".join([p.get("description", "") for p in data.get("projects", [])])
-    extra_skills = extract_skills_from_text(all_project_text)
+    # 从所有文本中提取额外技能
+    all_text = " ".join([p.get("description", "") for p in data.get("projects", [])])
+    all_text += " ".join([i.get("description", "") for i in data.get("internships", [])])
+    all_text += " ".join([w.get("description", "") for w in data.get("work_experience", [])])
+    extra_skills = extract_skills_from_text(all_text)
     skills.extend(extra_skills)
     skills = list(set(skills))
     
+    # 解析证书
+    certificates = []
+    for cert_data in data.get("certificates", []):
+        cert = Certificate(
+            name=cert_data.get("name", ""),
+            issuer=cert_data.get("issuer", ""),
+            date=cert_data.get("date", "")
+        )
+        certificates.append(cert)
+    
+    # 解析奖项
+    awards = []
+    for award_data in data.get("awards", []):
+        award = Award(
+            name=award_data.get("name", ""),
+            date=award_data.get("date", ""),
+            description=award_data.get("description", "")
+        )
+        awards.append(award)
+    
     return Resume(
         name=data.get("name", ""),
+        phone=data.get("phone", ""),
+        email=data.get("email", ""),
+        location=data.get("location", ""),
         education=education,
+        work_experience=work_experience,
+        internships=internships,
+        projects=projects,
         skills=skills,
-        projects=projects
+        certificates=certificates,
+        awards=awards,
+        self_evaluation=data.get("self_evaluation", "")
     )
 
 def parse_jd_from_dict(data: Dict[str, Any]) -> JobDescription:
