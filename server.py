@@ -208,48 +208,23 @@ def api_interview():
         
         system_prompt = SHIELD_PROMPT if mode == "shield" else SPEAR_PROMPT
         
-        # 【核心修复1】强行统一双模式的JSON约束，确保 intent 和 answer 一定生成
+        # 【核心修复1】简化提示词，减少生成时间
         json_schema = """
-        严格按以下JSON格式输出（必须包含所有字段）：
+        严格按以下JSON格式输出：
         {
           "self_intro": {
-            "formal": "一段专业的自我介绍",
+            "formal": "一段专业的自我介绍（100-150字）",
             "key_points": ["核心亮点1", "核心亮点2"]
           },
           "questions": [
-            {
-              "question": "面试问题",
-              "intent": "面试官问这个问题的核心目的和考察点",
-              "answer": "面试官期待的标准答案或答题框架",
-              "follow_ups": ["追问1", "追问2"]
-            },
-            {
-              "question": "第二个面试问题",
-              "intent": "考察点",
-              "answer": "标准答案",
-              "follow_ups": ["追问1"]
-            },
-            {
-              "question": "第三个面试问题",
-              "intent": "考察点",
-              "answer": "标准答案",
-              "follow_ups": ["追问1"]
-            },
-            {
-              "question": "第四个面试问题",
-              "intent": "考察点",
-              "answer": "标准答案",
-              "follow_ups": ["追问1"]
-            },
-            {
-              "question": "第五个面试问题",
-              "intent": "考察点",
-              "answer": "标准答案",
-              "follow_ups": ["追问1"]
-            }
+            {"question": "面试问题1", "intent": "考察点", "answer": "参考答案", "follow_ups": ["追问1"]},
+            {"question": "面试问题2", "intent": "考察点", "answer": "参考答案", "follow_ups": ["追问1"]},
+            {"question": "面试问题3", "intent": "考察点", "answer": "参考答案", "follow_ups": ["追问1"]},
+            {"question": "面试问题4", "intent": "考察点", "answer": "参考答案", "follow_ups": ["追问1"]},
+            {"question": "面试问题5", "intent": "考察点", "answer": "参考答案", "follow_ups": ["追问1"]}
           ]
         }
-        重要：questions数组必须包含5-8个问题，不能少于5个！
+        注意：自我介绍控制在150字以内，每道题的答案控制在100字以内。
         """
         
         if mode == "shield":

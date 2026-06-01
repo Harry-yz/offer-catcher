@@ -332,11 +332,36 @@
                 await new Promise(r => setTimeout(r, 500));
                 updateLastProgress('岗位分析完成', 'done');
 
-                addProgressStep('正在生成面试题库...');
-                const interviewResp = await fetch('/offercatcher/api/interview', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ resume: resumeData, jd: jdData, match_result: {}, mode: 'shield' })
+                addProgressStep('正在生成面试题库（可能需要1-2分钟）...');
+                
+                // 添加超时和重试机制
+                let interviewResp = null;
+                let retries = 0;
+                const maxRetries = 2;
+                
+                while (retries <= maxRetries) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3分钟超时
+                        
+                        interviewResp = await fetch('/offercatcher/api/interview', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ resume: resumeData, jd: jdData, match_result: {}, mode: 'shield' }),
+                            signal: controller.signal
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        break; // 成功，跳出循环
+                    } catch (fetchError) {
+                        retries++;
+                        if (retries > maxRetries) {
+                            throw new Error('生成超时，请稍后重试');
+                        }
+                        updateLastProgress(`重试中 (${retries}/${maxRetries})...`, 'loading');
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+                }
                 });
 
                 if (!interviewResp.ok) throw new Error('生成失败');
