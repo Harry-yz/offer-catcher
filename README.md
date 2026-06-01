@@ -29,38 +29,6 @@ python server.py
 # http://localhost:8080
 ```
 
-### Vercel部署
-
-1. **推送到GitHub**
-```bash
-git init
-git add .
-git commit -m "init"
-git remote add origin https://github.com/你的用户名/offer-catcher.git
-git push -u origin master
-```
-
-2. **登录Vercel**
-- 访问 https://vercel.com
-- 用GitHub账号登录
-
-3. **导入项目**
-- 点击 "New Project"
-- 选择你的仓库
-- 配置：
-  - **Framework Preset:** Other
-  - **Build Command:** (留空)
-  - **Output Directory:** (留空)
-
-4. **添加环境变量**
-- 在Settings → Environment Variables中添加：
-  - `MIMO_API_KEY` = 你的MiMo API密钥
-  - `MINERU_API_KEY` = 你的MinerU API密钥
-
-5. **部署完成**
-- Vercel会自动部署
-- 提供公网链接：`https://你的项目名.vercel.app`
-
 ## 技术栈
 
 - **后端:** Python + Flask
