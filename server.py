@@ -85,6 +85,23 @@ def interview():
 def interviewer():
     return render_template('workbench.html', mode='interviewer')
 
+@app.route('/api/cache/clear', methods=['GET', 'POST'])
+@app.route('/offercatcher/api/cache/clear', methods=['GET', 'POST'])
+def clear_cache():
+    """清除所有缓存"""
+    import shutil
+    from cache_manager import _memory_cache, CACHE_DIR
+    
+    # 清除内存缓存
+    _memory_cache.clear()
+    
+    # 清除文件缓存
+    if os.path.exists(CACHE_DIR):
+        shutil.rmtree(CACHE_DIR)
+        os.makedirs(CACHE_DIR, exist_ok=True)
+    
+    return jsonify({'success': True, 'message': '缓存已清除'})
+
 @app.route('/api/parse', methods=['POST'])
 @app.route('/offercatcher/api/parse', methods=['POST'])
 def api_parse():
