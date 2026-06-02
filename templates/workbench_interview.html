@@ -596,9 +596,12 @@
             const nextQ = questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : '';
             document.getElementById('currentQuestion').innerHTML = `<strong>当前问题:</strong> ${nextQ}`;
             
-            // 清空聊天记录，开始新的问答
-            chatHistory = [];
-            document.getElementById('chatContainer').innerHTML = '';
+            // 不清空聊天记录，保留上下文
+            // 添加分隔线标记新问题
+            const container = document.getElementById('chatContainer');
+            const divider = document.createElement('div');
+            divider.style.cssText = 'border-top: 1px dashed rgba(255,255,255,0.2); margin: 1rem 0;';
+            container.appendChild(divider);
             
             // 通过面试官的身份提出下一个问题
             const askText = `好的，我的下一个问题是：\n\n${nextQ}`;
