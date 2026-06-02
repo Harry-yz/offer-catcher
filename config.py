@@ -32,25 +32,9 @@ def get_key():
 # ============================================================
 # 解析提示词
 # ============================================================
-PARSE_RESUME_PROMPT = """Extract resume info as JSON. Fields can be empty. Keep quantified achievements as-is.
+PARSE_RESUME_PROMPT = """Extract resume info as JSON. Fields can be empty string or empty list. Keep quantified achievements exactly as written. Output ONLY the JSON, no explanation.
 
 {"name":"","phone":"","email":"","location":"","education":{"school":"","major":"","degree":"","gpa":"","start_date":"","end_date":""},"work_experience":[{"company":"","position":"","duration":"","description":"","key_achievements":[""]}],"internships":[{"company":"","position":"","duration":"","description":"","key_achievements":[""]}],"projects":[{"name":"","description":"","key_achievements":[""],"technologies":[""]}],"skills":[""],"certificates":[{"name":"","issuer":"","date":""}],"awards":[{"name":"","date":"","description":""}],"self_evaluation":""}"""
-  "certificates": [
-    {
-      "name": "证书名称",
-      "issuer": "颁发机构",
-      "date": "获得时间"
-    }
-  ],
-  "awards": [
-    {
-      "name": "奖项名称",
-      "date": "获得时间",
-      "description": "奖项描述"
-    }
-  ],
-  "self_evaluation": "自我评价内容"
-}"""
 
 PARSE_JD_PROMPT = """从以下内容提取岗位JD结构化信息，严格JSON输出：
 {"company":"","position":"","location":"","requirements":{"must_have":[{"skill":"","importance":"高"}],"nice_to_have":[{"skill":"","importance":"中"}]},"responsibilities":["职责1"]}
