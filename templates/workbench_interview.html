@@ -504,21 +504,23 @@
             const questions = interviewData.questions || [];
             const question = questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : '';
 
-            // 禁用发送按钮避免重复点击
             const sendBtn = document.getElementById('sendBtn');
+            const nextBtn = document.getElementById('nextBtn');
             sendBtn.disabled = true;
+            nextBtn.disabled = true;
 
+            // 显示用户回答
             chatHistory.push({ role: 'user', content: answer });
             renderChat('👤 你', answer, 'chat-user');
             input.value = '';
 
-            // 显示AI正在思考的提示
+            // 显示加载状态
             const thinkingId = 'thinking-' + Date.now();
             const container = document.getElementById('chatContainer');
             const thinkingDiv = document.createElement('div');
             thinkingDiv.id = thinkingId;
             thinkingDiv.className = 'chat-msg chat-ai';
-            thinkingDiv.innerHTML = '<div style="margin-bottom: 8px; font-weight: 600; color: #fff;">🤖 面试官:</div><div class="spinner-small" style="display:inline-block"></div> 正在点评...';
+            thinkingDiv.innerHTML = '<div style="margin-bottom: 8px; font-weight: 600; color: #fff;">🤖 面试官:</div><div class="spinner-small" style="display:inline-block"></div> <span style="color:var(--text-secondary)">正在点评你的回答...</span>';
             container.appendChild(thinkingDiv);
             container.scrollTop = container.scrollHeight;
 
@@ -537,50 +539,46 @@
 
                 const data = await response.json();
                 
-                // 移除思考提示
+                // 移除加载状态
                 const thinkingEl = document.getElementById(thinkingId);
                 if (thinkingEl) thinkingEl.remove();
                 
-                if (data.success) {
+                if (data.success && data.result) {
                     const result = data.result;
                     const scores = result.scores || {};
                     
-                    // 构建精细化回复结构
-                    let reply = `<div style="margin-bottom: 15px;">
-                        <strong style="color: var(--text-primary);">📊 评分维度:</strong><br>
-                        • 技术深度: ${scores.technical_depth || 0} / 100<br>
-                        • 量化支撑: ${scores.quantitative_support || 0} / 100<br>
-                        • 逻辑清晰: ${scores.logical_clarity || 0} / 100<br>
-                        <span style="color: var(--aurora-green); font-weight: bold; font-size: 1.1rem; display: inline-block; margin-top: 5px;">⭐ 综合得分: ${result.overall || 0}</span>
+                    let reply = `<div style="margin-bottom: 12px;">
+                        <strong style="color: var(--text-primary);">📊 评分</strong><br>
+                        <span style="color: var(--text-secondary)">技术深度: ${scores.technical_depth || 0} | 量化支撑: ${scores.quantitative_support || 0} | 逻辑清晰: ${scores.logical_clarity || 0}</span><br>
+                        <span style="color: var(--aurora-green); font-weight: bold;">综合: ${result.overall || 0}分</span>
                     </div>`;
                     
                     if (result.feedback) {
-                        reply += `<div style="margin-bottom: 15px; padding: 12px; background: rgba(255, 170, 0, 0.1); border-left: 3px solid var(--warning); border-radius: 4px;">
-                            <strong style="color: var(--warning);">💡 改进建议:</strong><br>
-                            <span style="color: var(--text-secondary);">${result.feedback.replace(/\n/g, '<br>')}</span>
+                        reply += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(255, 170, 0, 0.1); border-left: 3px solid #ffaa00; border-radius: 4px;">
+                            <strong style="color: #ffaa00;">💡 反馈:</strong><br>
+                            <span style="color: var(--text-secondary)">${result.feedback.replace(/\n/g, '<br>')}</span>
                         </div>`;
                     }
                     
                     if (result.model_answer) {
-                        reply += `<div style="padding: 12px; background: rgba(0, 255, 135, 0.08); border-left: 3px solid var(--aurora-green); border-radius: 4px;">
-                            <strong style="color: var(--aurora-green);">🎯 面试官期待的答案:</strong><br>
-                            <span style="color: var(--text-secondary);">${result.model_answer.replace(/\n/g, '<br>')}</span>
+                        reply += `<div style="padding: 10px; background: rgba(0, 255, 135, 0.08); border-left: 3px solid #00ff87; border-radius: 4px;">
+                            <strong style="color: #00ff87;">🎯 参考答案:</strong><br>
+                            <span style="color: var(--text-secondary)">${result.model_answer.replace(/\n/g, '<br>')}</span>
                         </div>`;
                     }
 
-                    // 注意：这里不再将追问(next_question)直接抛出，而是等待用户点击"下一题"
-
                     chatHistory.push({ role: 'assistant', content: reply });
-                    renderChat('🤖 面试官反馈', reply, 'chat-ai');
+                    renderChat('🤖 面试官', reply, 'chat-ai');
+                } else {
+                    renderChat('🤖 系统', '点评生成失败，请重试', 'chat-ai');
                 }
             } catch (error) {
-                // 移除思考提示
                 const thinkingEl = document.getElementById(thinkingId);
                 if (thinkingEl) thinkingEl.remove();
-                
-                renderChat('🤖 系统', '请求失败，请重试', 'chat-ai');
+                renderChat('🤖 系统', '请求失败: ' + error.message, 'chat-ai');
             } finally {
                 sendBtn.disabled = false;
+                nextBtn.disabled = false;
             }
         }
 
@@ -615,17 +613,22 @@
             const nextQ = questions[currentQuestionIdx] ? questions[currentQuestionIdx].question : '';
             document.getElementById('currentQuestion').innerHTML = `<strong>当前问题:</strong> ${nextQ}`;
             
-            // 不清空聊天记录，保留上下文
-            // 添加分隔线标记新问题
+            // 在聊天记录中添加分隔线和新问题
             const container = document.getElementById('chatContainer');
+            
+            // 添加分隔线
             const divider = document.createElement('div');
-            divider.style.cssText = 'border-top: 1px dashed rgba(255,255,255,0.2); margin: 1rem 0;';
+            divider.style.cssText = 'border-top: 1px dashed rgba(255,255,255,0.15); margin: 1.5rem 0; text-align: center;';
+            divider.innerHTML = '<span style="background: var(--midnight); padding: 0 1rem; color: var(--text-muted); font-size: 0.8rem;">下一题</span>';
             container.appendChild(divider);
             
-            // 通过面试官的身份提出下一个问题
-            const askText = `好的，我的下一个问题是：\n\n${nextQ}`;
+            // 添加新问题
+            const askText = nextQ;
             chatHistory.push({ role: 'assistant', content: askText });
             renderChat('🤖 面试官', askText, 'chat-ai');
+            
+            // 清空输入框
+            document.getElementById('chatInput').value = '';
         }
     </script>
 </body>
