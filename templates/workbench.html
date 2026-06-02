@@ -703,14 +703,14 @@
 
             const jdItems = document.querySelectorAll('.jd-item');
             let hasJd = false;
-            const formData = new FormData();
-            formData.append('resume', resumeFile);
+            let firstJdFile = null;
+            let firstJdText = '';
 
             jdItems.forEach(item => {
                 const fileInput = item.querySelector('.jd-file');
                 const textInput = item.querySelector('.jd-text');
-                if (fileInput.files[0]) { formData.append('jd_files', fileInput.files[0]); hasJd = true; }
-                if (textInput.value.trim()) { formData.append('jd_texts', textInput.value.trim()); hasJd = true; }
+                if (fileInput.files[0]) { firstJdFile = fileInput.files[0]; hasJd = true; }
+                if (textInput.value.trim()) { firstJdText = textInput.value.trim(); hasJd = true; }
             });
 
             if (!hasJd) { showError('请上传JD'); return; }
@@ -721,20 +721,56 @@
             showProgress('interviewPrep');
 
             try {
-                await addSequentialStep('正在解析候选人简历...', 1000);
-                addProgressStep('正在调用MinerU提取文本...', 'loading');
+                // Step 1: 解析简历
+                addProgressStep('正在解析候选人简历...', 'loading');
 
-                const parseResp = await fetch('/offercatcher/api/parse', { method: 'POST', body: formData });
-                if (!parseResp.ok) throw new Error('解析失败');
-                const parseData = await parseResp.json();
-                if (!parseData.success) throw new Error(parseData.error || '解析失败');
+                const resumeFormData = new FormData();
+                resumeFormData.append('resume', resumeFile);
 
-                resumeData = parseData.resume;
-                jdDataList = parseData.jds;
+                const resumeResp = await fetch('/offercatcher/api/parse-resume', {
+                    method: 'POST',
+                    body: resumeFormData,
+                    signal: AbortSignal.timeout(300000)
+                });
 
+                if (!resumeResp.ok) {
+                    const err = await resumeResp.json().catch(() => ({}));
+                    throw new Error(err.error || '简历解析失败');
+                }
+
+                const resumeDataResp = await resumeResp.json();
+                if (!resumeDataResp.success) throw new Error(resumeDataResp.error || '简历解析失败');
+
+                resumeData = resumeDataResp.resume;
                 completeLastStep(`简历解析完成: ${resumeData.name}`);
                 await new Promise(r => setTimeout(r, 300));
-                await addSequentialStep(`正在分析岗位要求: ${jdDataList[0].company}...`, 800);
+
+                // Step 2: 解析JD
+                addProgressStep('正在解析目标岗位...', 'loading');
+
+                const jdFormData = new FormData();
+                if (firstJdFile) jdFormData.append('jd_file', firstJdFile);
+                if (firstJdText) jdFormData.append('jd_text', firstJdText);
+
+                const jdResp = await fetch('/offercatcher/api/parse-jd', {
+                    method: 'POST',
+                    body: jdFormData,
+                    signal: AbortSignal.timeout(180000)
+                });
+
+                if (!jdResp.ok) {
+                    const err = await jdResp.json().catch(() => ({}));
+                    throw new Error(err.error || 'JD解析失败');
+                }
+
+                const jdDataResp = await jdResp.json();
+                if (!jdDataResp.success) throw new Error(jdDataResp.error || 'JD解析失败');
+
+                jdData = [jdDataResp.jd];
+                completeLastStep(`岗位解析完成: ${jdData[0].company} - ${jdData[0].position}`);
+                await new Promise(r => setTimeout(r, 300));
+
+                // Step 3: 生成面试策略
                 await addSequentialStep('正在设计面试问题...', 1000);
                 addProgressStep('正在生成面试策略...', 'loading');
 
