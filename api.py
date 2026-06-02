@@ -49,7 +49,10 @@ def api(messages: list, model: Optional[str] = None, json_mode: bool = False) ->
     try:
         resp = requests.post(url, headers=headers, json=data, timeout=300)
         resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
+        resp_json = resp.json()
+        content = resp_json["choices"][0]["message"]["content"]
+        
+        logger.info(f"API返回内容前200字: {content[:200]}")
         
         if json_mode:
             return extract_json(content)
@@ -71,7 +74,7 @@ def extract_json(text: str) -> Dict[str, Any]:
     except json.JSONDecodeError:
         pass
     
-    # 【修复核心3】拆分反引号字符串，防止聊天界面把代码块强行截断
+    # 拆分反引号字符串
     md_block = '`' * 3
     pattern = md_block + r'(?:json)?\s*\n?([\s\S]*?)\n?' + md_block
     m = re.search(pattern, text)
@@ -88,7 +91,7 @@ def extract_json(text: str) -> Dict[str, Any]:
         except json.JSONDecodeError:
             pass
     
-    logger.warning(f"JSON提取失败，原始文本: {text[:100]}...")
+    logger.warning(f"JSON提取失败，原始文本前500字: {text[:500]}")
     return {}
 
 def parse_image(file_bytes: bytes, prompt: str) -> Dict[str, Any]:

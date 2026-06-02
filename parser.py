@@ -234,7 +234,7 @@ def do_parse_resume(uploaded_file) -> Optional[Resume]:
                 result = parse_text(text, PARSE_RESUME_PROMPT)
         
         if not result:
-            logger.error("无法解析文件，请确保MinerU已配置")
+            logger.error(f"无法解析文件 {name}，MinerU可用: {is_available()}")
             return None
     else:
         # 纯文本
