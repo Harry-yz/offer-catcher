@@ -272,36 +272,27 @@ def api_interview():
 def api_mock():
     try:
         data = request.json
-        history = data.get('history', [])
         question = data.get('question', '')
         answer = data.get('answer', '')
-        mode = data.get('mode', 'shield')
         
-        system = SHIELD_PROMPT if mode == "shield" else SPEAR_PROMPT
+        # 简化提示词，减少token消耗
+        system = """你是面试官。根据候选人的回答进行评分和点评。
+输出JSON格式：
+{"scores":{"technical_depth":70,"quantitative_support":70,"logical_clarity":70},"overall":70,"feedback":"改进建议","model_answer":"参考答案"}
+评分范围0-100，feedback和model_answer各50字以内。"""
+
+        user_msg = f"问题：{question}\n\n回答：{answer}"
         
-        # 【核心修复2】去除了 next_question 的生成逻辑，全神贯注写反馈
-        prompt = """作为资深面试官，请根据候选人的回答进行专业评分，指出具体不足（反馈），并给出你期待的标准答案。
-        严格按此JSON格式输出：
-        {
-          "scores": {
-            "technical_depth": 70,
-            "quantitative_support": 80,
-            "logical_clarity": 85
-          },
-          "overall": 78,
-          "feedback": "指出回答的闪光点以及具体的改进建议...",
-          "model_answer": "遇到这类问题，高分的回答框架应该是：..."
-        }
-        """
+        result = api([{"role": "system", "content": system}, {"role": "user", "content": user_msg}], json_mode=True)
         
-        msgs = [{"role": "system", "content": system + "\n\n" + prompt}]
-        for h in history[-4:]:
-            msgs.append({"role": h["role"], "content": h["content"]})
-        msgs.append({"role": "user", "content": f"当前面试题：{question}\n\n候选人回答：{answer}"})
+        if not result or not isinstance(result, dict):
+            result = {"scores": {"technical_depth": 60, "quantitative_support": 60, "logical_clarity": 60}, "overall": 60, "feedback": "回答已记录", "model_answer": "暂无"}
         
-        result = api(msgs, json_mode=True)
-        if not result:
-            result = {"scores": {"technical_depth": 60, "quantitative_support": 60, "logical_clarity": 60}, "overall": 60, "feedback": "回答已记录，API生成点评超时", "model_answer": "暂无"}
+        # 确保字段完整
+        result.setdefault('scores', {"technical_depth": 60, "quantitative_support": 60, "logical_clarity": 60})
+        result.setdefault('overall', 60)
+        result.setdefault('feedback', '')
+        result.setdefault('model_answer', '')
         
         return jsonify({'success': True, 'result': result})
     except Exception as e:
