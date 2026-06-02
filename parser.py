@@ -46,10 +46,20 @@ def extract_achievements(text: str) -> List[str]:
     
     return achievements
 
-def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
+def parse_resume_from_dict(data: Dict[str, Any], filename: str = "") -> Resume:
     """从字典解析简历数据"""
-    if not data or not data.get("name"):
+    if not data:
         return None
+    
+    # 如果没有name字段，尝试从文件名提取
+    name = data.get("name", "").strip()
+    if not name and filename:
+        # 从文件名提取姓名（去掉扩展名和常见后缀）
+        name = filename.replace(".pdf", "").replace(".png", "").replace(".jpg", "").replace(".jpeg", "")
+        name = name.split("-")[0].split("_")[0].strip()
+    
+    if not name:
+        name = "未知姓名"
     
     # 解析教育背景
     edu_data = data.get("education", {})
@@ -160,7 +170,7 @@ def parse_resume_from_dict(data: Dict[str, Any]) -> Resume:
         awards.append(award)
     
     return Resume(
-        name=data.get("name", ""),
+        name=name,
         phone=data.get("phone", ""),
         email=data.get("email", ""),
         location=data.get("location", ""),
@@ -214,7 +224,7 @@ def do_parse_resume(uploaded_file) -> Optional[Resume]:
     cached = get_resume_cache(fb)
     if cached:
         logger.info("简历解析命中缓存")
-        return parse_resume_from_dict(cached)
+        return parse_resume_from_dict(cached, name)
     
     # 使用MinerU解析PDF和图片
     result = None
@@ -244,7 +254,7 @@ def do_parse_resume(uploaded_file) -> Optional[Resume]:
     if result:
         save_resume_cache(fb, result)
     
-    return parse_resume_from_dict(result)
+    return parse_resume_from_dict(result, name)
 
 def do_parse_jd(uploaded_file=None, text_input="") -> Optional[JobDescription]:
     """解析JD（带缓存）"""
