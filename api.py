@@ -29,7 +29,7 @@ def api(messages: list, model: Optional[str] = None, json_mode: bool = False) ->
     data = {
         "model": MODEL_NAME,
         "messages": messages,
-        "max_completion_tokens": 16384,
+        "max_completion_tokens": 32768,
         "temperature": 0.1
     }
 

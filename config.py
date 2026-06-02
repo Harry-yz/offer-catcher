@@ -32,9 +32,20 @@ def get_key():
 # ============================================================
 # 解析提示词
 # ============================================================
-PARSE_RESUME_PROMPT = """Extract resume info as JSON. Fields can be empty string or empty list. Keep quantified achievements exactly as written. Output ONLY the JSON, no explanation.
+PARSE_RESUME_PROMPT = """Read the resume text below and extract structured information as JSON.
 
-{"name":"","phone":"","email":"","location":"","education":{"school":"","major":"","degree":"","gpa":"","start_date":"","end_date":""},"work_experience":[{"company":"","position":"","duration":"","description":"","key_achievements":[""]}],"internships":[{"company":"","position":"","duration":"","description":"","key_achievements":[""]}],"projects":[{"name":"","description":"","key_achievements":[""],"technologies":[""]}],"skills":[""],"certificates":[{"name":"","issuer":"","date":""}],"awards":[{"name":"","date":"","description":""}],"self_evaluation":""}"""
+Important rules:
+- name: extract the candidate's full name
+- For projects and internships, extract ALL of them with their achievements
+- Keep all quantified numbers exactly as written (40%, 87.3%, etc)
+- skills: list all technical skills mentioned
+- If a field is not found, use empty string or empty list
+
+Output format:
+{"name":"...","phone":"...","email":"...","location":"...","education":{"school":"...","major":"...","degree":"...","gpa":"...","start_date":"...","end_date":"..."},"work_experience":[{"company":"...","position":"...","duration":"...","description":"...","key_achievements":["..."]}],"internships":[{"company":"...","position":"...","duration":"...","description":"...","key_achievements":["..."]}],"projects":[{"name":"...","description":"...","key_achievements":["..."],"technologies":["..."]}],"skills":["..."],"certificates":[{"name":"...","issuer":"...","date":"..."}],"awards":[{"name":"...","date":"...","description":"..."}],"self_evaluation":"..."}
+
+Resume text:
+"""
 
 PARSE_JD_PROMPT = """从以下内容提取岗位JD结构化信息，严格JSON输出：
 {"company":"","position":"","location":"","requirements":{"must_have":[{"skill":"","importance":"高"}],"nice_to_have":[{"skill":"","importance":"中"}]},"responsibilities":["职责1"]}
