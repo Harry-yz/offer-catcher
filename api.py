@@ -43,7 +43,7 @@ def api(messages: list, model: Optional[str] = None, json_mode: bool = False) ->
     logger.info(f"API请求: {url}, 模型: {MODEL_NAME}")
 
     try:
-        resp = requests.post(url, headers=headers, json=data, timeout=120)
+        resp = requests.post(url, headers=headers, json=data, timeout=300)
         logger.info(f"API响应状态码: {resp.status_code}")
         
         if resp.status_code != 200:
@@ -63,7 +63,7 @@ def api(messages: list, model: Optional[str] = None, json_mode: bool = False) ->
             return extract_json(content)
         return content
     except requests.exceptions.Timeout:
-        logger.error("API请求超时(120秒)")
+        logger.error("API请求超时(300秒)")
         raise APIError("API请求超时，请稍后重试")
     except requests.exceptions.RequestException as e:
         error_msg = f"API网络请求失败: {e}"

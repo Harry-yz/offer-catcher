@@ -112,7 +112,7 @@ class MineruParser:
             logger.error(f"文件上传失败: {e}")
             return None
     
-    def _wait_for_result(self, batch_id: str, max_wait: int = 90) -> Optional[str]:
+    def _wait_for_result(self, batch_id: str, max_wait: int = 120) -> Optional[str]:
         """等待任务完成并获取结果"""
         url = f"{self.base_url}/extract-results/batch/{batch_id}"
         headers = {

@@ -435,7 +435,7 @@
                 addProgressStep('正在调用MinerU提取文本...', 'loading');
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 90000);
+                const timeoutId = setTimeout(() => controller.abort(), 300000);
 
                 const response = await fetch('/offercatcher/api/parse', {
                     method: 'POST',
@@ -713,11 +713,17 @@
                 await addSequentialStep('正在设计面试问题...', 1000);
                 addProgressStep('正在生成面试策略...', 'loading');
 
+                const controller2 = new AbortController();
+                const timeoutId2 = setTimeout(() => controller2.abort(), 300000);
+
                 const strategyResp = await fetch('/offercatcher/api/interview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ resume: resumeData, jd: jdDataList[0], mode: 'spear' })
+                    body: JSON.stringify({ resume: resumeData, jd: jdDataList[0], mode: 'spear' }),
+                    signal: controller2.signal
                 });
+
+                clearTimeout(timeoutId2);
 
                 if (!strategyResp.ok) throw new Error('生成失败');
                 const strategyData = await strategyResp.json();
