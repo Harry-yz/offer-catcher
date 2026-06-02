@@ -399,22 +399,13 @@
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('resume', resumeFile);
-
+            // Check if at least one JD is provided
             const jdItems = document.querySelectorAll('.jd-item');
             let hasJd = false;
-
             jdItems.forEach(item => {
                 const fileInput = item.querySelector('.jd-file');
                 const textInput = item.querySelector('.jd-text');
-
-                if (fileInput.files[0]) {
-                    formData.append('jd_files', fileInput.files[0]);
-                    hasJd = true;
-                }
-                if (textInput.value.trim()) {
-                    formData.append('jd_texts', textInput.value.trim());
+                if ((fileInput && fileInput.files[0]) || (textInput && textInput.value.trim())) {
                     hasJd = true;
                 }
             });
@@ -431,50 +422,82 @@
             showProgress('parsedResult');
 
             try {
-                await addSequentialStep('正在解析候选人简历...', 1000);
-                addProgressStep('正在调用MinerU提取文本...', 'loading');
+                // Step 1: 解析简历
+                addProgressStep('正在解析候选人简历...', 'loading');
 
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 300000);
+                const resumeFormData = new FormData();
+                resumeFormData.append('resume', document.getElementById('resumeFile').files[0]);
 
-                const response = await fetch('/offercatcher/api/parse', {
+                const resumeResp = await fetch('/offercatcher/api/parse-resume', {
                     method: 'POST',
-                    body: formData,
-                    signal: controller.signal
+                    body: resumeFormData
                 });
 
-                clearTimeout(timeoutId);
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `HTTP ${response.status}: 请求失败`);
+                if (!resumeResp.ok) {
+                    const err = await resumeResp.json().catch(() => ({}));
+                    throw new Error(err.error || '简历解析失败');
                 }
 
-                const data = await response.json();
-                if (data.error) throw new Error(data.error);
+                const resumeDataResp = await resumeResp.json();
+                if (!resumeDataResp.success) throw new Error(resumeDataResp.error || '简历解析失败');
 
-                resumeData = data.resume;
-                jdDataList = data.jds;
-
-                completeLastStep('文本提取完成');
+                resumeData = resumeDataResp.resume;
+                completeLastStep(`简历解析完成: ${resumeData.name}`);
                 await new Promise(r => setTimeout(r, 300));
+
+                // Step 2: 逐个解析JD
+                jdDataList = [];
+                const jdItems = document.querySelectorAll('.jd-item');
+
+                for (let i = 0; i < jdItems.length; i++) {
+                    const item = jdItems[i];
+                    const fileInput = item.querySelector('.jd-file');
+                    const textInput = item.querySelector('.jd-text');
+
+                    const hasFile = fileInput && fileInput.files[0];
+                    const hasText = textInput && textInput.value.trim();
+
+                    if (!hasFile && !hasText) continue;
+
+                    addProgressStep(`正在解析岗位 ${i+1}...`, 'loading');
+
+                    const jdFormData = new FormData();
+                    if (hasFile) jdFormData.append('jd_file', fileInput.files[0]);
+                    if (hasText) jdFormData.append('jd_text', textInput.value.trim());
+
+                    try {
+                        const jdResp = await fetch('/offercatcher/api/parse-jd', {
+                            method: 'POST',
+                            body: jdFormData
+                        });
+
+                        if (jdResp.ok) {
+                            const jdDataResp = await jdResp.json();
+                            if (jdDataResp.success && jdDataResp.jd) {
+                                jdDataList.push(jdDataResp.jd);
+                                completeLastStep(`岗位解析完成: ${jdDataResp.jd.company} - ${jdDataResp.jd.position}`);
+                            } else {
+                                completeLastStep(`岗位 ${i+1} 解析失败`);
+                            }
+                        } else {
+                            completeLastStep(`岗位 ${i+1} 解析失败`);
+                        }
+                    } catch (e) {
+                        completeLastStep(`岗位 ${i+1} 解析失败: ${e.message}`);
+                    }
+
+                    await new Promise(r => setTimeout(r, 300));
+                }
 
                 if (jdDataList.length === 0) throw new Error('所有JD解析失败，请检查JD内容');
 
-                for (let i = 0; i < jdDataList.length; i++) {
-                    await addSequentialStep(`正在解析岗位 ${i+1}/${jdDataList.length}: ${jdDataList[i].company}...`, 500);
-                }
-                await addSequentialStep('解析完成', 500);
+                addProgressStep(`✅ 解析完成，共 ${jdDataList.length} 个岗位`, 'done');
+                await new Promise(r => setTimeout(r, 500));
 
                 renderParsedResult();
                 document.getElementById('matchBtn').disabled = false;
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    showError('请求超时', '服务器响应时间过长', '1. 检查网络连接是否正常\n2. 稍后重试\n3. 尝试较小文件');
-                } else {
-                    const errorMsg = error.message || '未知错误';
-                    showError('解析失败', errorMsg);
-                }
+                showError('解析失败', error.message);
             } finally {
                 document.getElementById('parseBtn').disabled = false;
             }

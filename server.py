@@ -102,9 +102,10 @@ def clear_cache():
     
     return jsonify({'success': True, 'message': '缓存已清除'})
 
-@app.route('/api/parse', methods=['POST'])
-@app.route('/offercatcher/api/parse', methods=['POST'])
-def api_parse():
+@app.route('/api/parse-resume', methods=['POST'])
+@app.route('/offercatcher/api/parse-resume', methods=['POST'])
+def api_parse_resume():
+    """只解析简历"""
     try:
         resume_file = request.files.get('resume')
         if not resume_file:
@@ -121,46 +122,51 @@ def api_parse():
         if not resume:
             return jsonify({'error': '简历解析失败'}), 400
         
-        jds = []
-        jd_files = request.files.getlist('jd_files')
-        jd_texts = request.form.getlist('jd_texts')
-        
-        for jd_file in jd_files:
-            if jd_file and jd_file.filename:
-                jd = do_parse_jd(FileWrapper(jd_file.read(), jd_file.filename))
-                if jd:
-                    jds.append({
-                        'company': jd.company, 'position': jd.position, 'location': jd.location,
-                        'requirements': {
-                            'must_have': [{'skill': r.skill, 'importance': r.importance} for r in jd.requirements.must_have],
-                            'nice_to_have': [{'skill': r.skill, 'importance': r.importance} for r in jd.requirements.nice_to_have]
-                        },
-                        'responsibilities': jd.responsibilities
-                    })
-        
-        for jd_text in jd_texts:
-            if jd_text and jd_text.strip():
-                jd = do_parse_jd(text_input=jd_text)
-                if jd:
-                    jds.append({
-                        'company': jd.company, 'position': jd.position, 'location': jd.location,
-                        'requirements': {
-                            'must_have': [{'skill': r.skill, 'importance': r.importance} for r in jd.requirements.must_have],
-                            'nice_to_have': [{'skill': r.skill, 'importance': r.importance} for r in jd.requirements.nice_to_have]
-                        },
-                        'responsibilities': jd.responsibilities
-                    })
-        
-        if not jds:
-            return jsonify({'error': '请至少上传一个JD（图片或文本）'}), 400
-        
         resume_data = {
             'name': resume.name,
             'education': {'school': resume.education.school, 'major': resume.education.major, 'degree': resume.education.degree},
             'skills': resume.skills,
-            'projects': [{'name': p.name, 'description': p.description, 'key_achievements': p.key_achievements, 'technologies': p.technologies} for p in resume.projects]
+            'projects': [{'name': p.name, 'description': p.description, 'key_achievements': p.key_achievements, 'technologies': p.technologies} for p in resume.projects],
+            'internships': [{'company': i.company, 'position': i.position, 'duration': i.duration, 'description': i.description, 'key_achievements': i.key_achievements} for i in resume.internships]
         }
-        return jsonify({'success': True, 'resume': resume_data, 'jds': jds})
+        return jsonify({'success': True, 'resume': resume_data})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': f'解析失败: {str(e)}'}), 500
+
+@app.route('/api/parse-jd', methods=['POST'])
+@app.route('/offercatcher/api/parse-jd', methods=['POST'])
+def api_parse_jd():
+    """只解析单个JD"""
+    try:
+        class FileWrapper:
+            def __init__(self, data, name):
+                self._data = data
+                self.name = name
+            def read(self): return self._data
+        
+        jd_file = request.files.get('jd_file')
+        jd_text = request.form.get('jd_text', '').strip()
+        
+        if jd_file and jd_file.filename:
+            jd = do_parse_jd(FileWrapper(jd_file.read(), jd_file.filename))
+        elif jd_text:
+            jd = do_parse_jd(text_input=jd_text)
+        else:
+            return jsonify({'error': '请提供JD'}), 400
+        
+        if not jd:
+            return jsonify({'error': 'JD解析失败'}), 400
+        
+        jd_data = {
+            'company': jd.company, 'position': jd.position, 'location': jd.location,
+            'requirements': {
+                'must_have': [{'skill': r.skill, 'importance': r.importance} for r in jd.requirements.must_have],
+                'nice_to_have': [{'skill': r.skill, 'importance': r.importance} for r in jd.requirements.nice_to_have]
+            },
+            'responsibilities': jd.responsibilities
+        }
+        return jsonify({'success': True, 'jd': jd_data})
     except Exception as e:
         traceback.print_exc()
         return jsonify({'error': f'解析失败: {str(e)}'}), 500
