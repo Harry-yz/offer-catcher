@@ -512,6 +512,16 @@
             renderChat('👤 你', answer, 'chat-user');
             input.value = '';
 
+            // 显示AI正在思考的提示
+            const thinkingId = 'thinking-' + Date.now();
+            const container = document.getElementById('chatContainer');
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.id = thinkingId;
+            thinkingDiv.className = 'chat-msg chat-ai';
+            thinkingDiv.innerHTML = '<div style="margin-bottom: 8px; font-weight: 600; color: #fff;">🤖 面试官:</div><div class="spinner-small" style="display:inline-block"></div> 正在点评...';
+            container.appendChild(thinkingDiv);
+            container.scrollTop = container.scrollHeight;
+
             try {
                 const response = await fetch('/offercatcher/api/mock', {
                     method: 'POST',
@@ -526,6 +536,11 @@
                 });
 
                 const data = await response.json();
+                
+                // 移除思考提示
+                const thinkingEl = document.getElementById(thinkingId);
+                if (thinkingEl) thinkingEl.remove();
+                
                 if (data.success) {
                     const result = data.result;
                     const scores = result.scores || {};
@@ -559,6 +574,10 @@
                     renderChat('🤖 面试官反馈', reply, 'chat-ai');
                 }
             } catch (error) {
+                // 移除思考提示
+                const thinkingEl = document.getElementById(thinkingId);
+                if (thinkingEl) thinkingEl.remove();
+                
                 renderChat('🤖 系统', '请求失败，请重试', 'chat-ai');
             } finally {
                 sendBtn.disabled = false;
