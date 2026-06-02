@@ -32,55 +32,9 @@ def get_key():
 # ============================================================
 # 解析提示词
 # ============================================================
-PARSE_RESUME_PROMPT = """从以下内容提取简历结构化信息，严格JSON输出。
+PARSE_RESUME_PROMPT = """Extract resume info as JSON. Fields can be empty. Keep quantified achievements as-is.
 
-要求：
-1. 提取所有能找到的信息，字段可以为空但不能遗漏
-2. 关键成果必须保留原始量化数据（40%、87.3%等）
-3. 技能要去重
-4. 时间格式统一为"YYYY.MM"或"YYYY.MM-YYYY.MM"
-
-JSON格式：
-{
-  "name": "姓名",
-  "phone": "电话",
-  "email": "邮箱",
-  "location": "所在城市",
-  "education": {
-    "school": "学校",
-    "major": "专业",
-    "degree": "学历（本科/硕士/博士）",
-    "gpa": "绩点（如有）",
-    "start_date": "开始时间",
-    "end_date": "结束时间"
-  },
-  "work_experience": [
-    {
-      "company": "公司名",
-      "position": "职位",
-      "duration": "2023.01-2024.01",
-      "description": "工作描述",
-      "key_achievements": ["成就1：具体数据"]
-    }
-  ],
-  "internships": [
-    {
-      "company": "公司名",
-      "position": "职位",
-      "duration": "2023.01-2024.01",
-      "description": "实习描述",
-      "key_achievements": ["成就1"]
-    }
-  ],
-  "projects": [
-    {
-      "name": "项目名",
-      "description": "项目描述",
-      "key_achievements": ["成就1：具体数据"],
-      "technologies": ["技术1", "技术2"]
-    }
-  ],
-  "skills": ["技能1", "技能2"],
+{"name":"","phone":"","email":"","location":"","education":{"school":"","major":"","degree":"","gpa":"","start_date":"","end_date":""},"work_experience":[{"company":"","position":"","duration":"","description":"","key_achievements":[""]}],"internships":[{"company":"","position":"","duration":"","description":"","key_achievements":[""]}],"projects":[{"name":"","description":"","key_achievements":[""],"technologies":[""]}],"skills":[""],"certificates":[{"name":"","issuer":"","date":""}],"awards":[{"name":"","date":"","description":""}],"self_evaluation":""}"""
   "certificates": [
     {
       "name": "证书名称",

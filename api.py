@@ -29,7 +29,7 @@ def api(messages: list, model: Optional[str] = None, json_mode: bool = False) ->
     data = {
         "model": MODEL_NAME,
         "messages": messages,
-        "max_completion_tokens": 4096,
+        "max_completion_tokens": 16384,
         "temperature": 0.1
     }
 
@@ -51,9 +51,23 @@ def api(messages: list, model: Optional[str] = None, json_mode: bool = False) ->
             raise APIError(f"API返回 {resp.status_code}: {resp.text[:200]}")
         
         resp_json = resp.json()
-        content = resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+        message = resp_json.get("choices", [{}])[0].get("message", {})
+        content = message.get("content", "")
+        reasoning = message.get("reasoning_content", "")
         
-        logger.info(f"API返回内容长度: {len(content)} 字符")
+        logger.info(f"API返回内容长度: {len(content)} 字符, reasoning长度: {len(reasoning)} 字符")
+        
+        # 如果content为空但reasoning有内容，说明token被reasoning消耗完了
+        if not content and reasoning:
+            logger.warning(f"content为空，reasoning前200字: {reasoning[:200]}")
+            # 尝试从reasoning中提取JSON
+            if json_mode:
+                result = extract_json(reasoning)
+                if result:
+                    logger.info("从reasoning中提取到JSON")
+                    return result
+            raise APIError("MiMo模型思考时间过长，未生成有效回答。请稍后重试。")
+        
         if content:
             logger.info(f"API返回前200字: {content[:200]}")
         else:
