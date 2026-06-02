@@ -272,23 +272,40 @@ def api_interview():
 def api_mock():
     try:
         data = request.json
+        history = data.get('history', [])
         question = data.get('question', '')
         answer = data.get('answer', '')
+        resume = data.get('resume', {})
+        jd = data.get('jd', {})
         
-        # 简化提示词，减少token消耗
-        system = """你是面试官。根据候选人的回答进行评分和点评。
-输出JSON格式：
-{"scores":{"technical_depth":70,"quantitative_support":70,"logical_clarity":70},"overall":70,"feedback":"改进建议","model_answer":"参考答案"}
-评分范围0-100，feedback和model_answer各50字以内。"""
+        # 构建上下文
+        skills = ', '.join(resume.get('skills', [])[:5])
+        company = jd.get('company', '')
+        position = jd.get('position', '')
+        
+        system = f"""你是资深面试官，正在面试{company}的{position}岗位。
+候选人技能：{skills}
 
-        user_msg = f"问题：{question}\n\n回答：{answer}"
+请对候选人的回答进行点评，输出JSON：
+{{
+  "scores": {{"technical_depth": 70, "quantitative_support": 70, "logical_clarity": 70}},
+  "overall": 70,
+  "feedback": "回答的亮点和改进建议，2-3句话",
+  "model_answer": "这个问题的高分回答思路，2-3句话"
+}}
+评分0-100，feedback和model_answer简洁有力。"""
+
+        # 构建消息，包含最近的历史
+        msgs = [{"role": "system", "content": system}]
+        for h in history[-6:]:
+            msgs.append({"role": h["role"], "content": h["content"]})
+        msgs.append({"role": "user", "content": f"面试题：{question}\n\n候选人回答：{answer}"})
         
-        result = api([{"role": "system", "content": system}, {"role": "user", "content": user_msg}], json_mode=True)
+        result = api(msgs, json_mode=True)
         
         if not result or not isinstance(result, dict):
             result = {"scores": {"technical_depth": 60, "quantitative_support": 60, "logical_clarity": 60}, "overall": 60, "feedback": "回答已记录", "model_answer": "暂无"}
         
-        # 确保字段完整
         result.setdefault('scores', {"technical_depth": 60, "quantitative_support": 60, "logical_clarity": 60})
         result.setdefault('overall', 60)
         result.setdefault('feedback', '')
