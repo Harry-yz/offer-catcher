@@ -432,10 +432,10 @@
 
             try {
                 await addSequentialStep('正在解析候选人简历...', 1000);
-                addProgressStep('正在调用MinerU提取文本（最多等待90秒）...', 'loading');
+                addProgressStep('正在调用MinerU提取文本...', 'loading');
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 120000);
+                const timeoutId = setTimeout(() => controller.abort(), 90000);
 
                 const response = await fetch('/offercatcher/api/parse', {
                     method: 'POST',

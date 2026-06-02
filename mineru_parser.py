@@ -175,25 +175,31 @@ class MineruParser:
         import io
         
         try:
-            logger.info(f"下载结果: {full_zip_url[:50]}...")
+            logger.info(f"开始下载结果: {full_zip_url[:80]}...")
             
             # 使用全局Session下载（带重试机制）
-            response = http_session.get(full_zip_url, timeout=120)
+            response = http_session.get(full_zip_url, timeout=60)
             response.raise_for_status()
+            logger.info(f"下载完成，大小: {len(response.content)} bytes")
             
             # 解析zip文件
             with zipfile.ZipFile(io.BytesIO(response.content)) as zip_file:
+                logger.info(f"ZIP文件内容: {zip_file.namelist()}")
                 # 查找markdown文件
                 for file_name in zip_file.namelist():
                     if file_name.endswith('.md'):
                         with zip_file.open(file_name) as md_file:
-                            return md_file.read().decode('utf-8')
+                            text = md_file.read().decode('utf-8')
+                            logger.info(f"提取到markdown，长度: {len(text)} 字符")
+                            return text
                 
                 # 如果没有markdown文件，尝试查找其他文本文件
                 for file_name in zip_file.namelist():
                     if file_name.endswith('.txt') or file_name.endswith('.json'):
                         with zip_file.open(file_name) as txt_file:
-                            return txt_file.read().decode('utf-8')
+                            text = txt_file.read().decode('utf-8')
+                            logger.info(f"提取到文本文件，长度: {len(text)} 字符")
+                            return text
             
             logger.warning("未找到可读取的文本文件")
             return None

@@ -19,44 +19,52 @@ class APIError(Exception):
 def api(messages: list, model: Optional[str] = None, json_mode: bool = False) -> Union[str, Dict[str, Any]]:
     """调用MiMo API，返回文本或解析后的dict"""
     
-    # 【修复核心1】动态获取环境变量，防止 Gunicorn 后台运行时路径偏移导致找不到
     API_KEY = os.getenv("MIMO_API_KEY", "")
     API_BASE = os.getenv("API_BASE", "https://api.xiaomimimo.com/v1")
+    MODEL_NAME = model or os.getenv("MODEL", "mimo-v2.5-pro")
     
     if not API_KEY:
         raise APIError("未配置MIMO_API_KEY，请检查服务器 .env 文件！")
 
     data = {
-        "model": model or os.getenv("MODEL", "mimo-v2.5-pro"),
+        "model": MODEL_NAME,
         "messages": messages,
         "max_completion_tokens": 4096,
         "temperature": 0.1
     }
-    
-    # 【修复核心2】部分大模型强开 json_object 会报 400 错误，直接注释掉，依靠下方强大的正则提取
-    # if json_mode:
-    #     data["response_format"] = {"type": "json_object"}
 
     url = f"{API_BASE}/chat/completions"
+    # MiMo API用Authorization Bearer
     headers = {
         "Content-Type": "application/json",
-        "api-key": API_KEY,
-        "Authorization": f"Bearer {API_KEY}" # 增加Bearer兼容不同网关设置
+        "Authorization": f"Bearer {API_KEY}"
     }
 
-    logger.debug(f"API请求: {url}, 模型: {data['model']}")
+    logger.info(f"API请求: {url}, 模型: {MODEL_NAME}")
 
     try:
-        resp = requests.post(url, headers=headers, json=data, timeout=300)
-        resp.raise_for_status()
-        resp_json = resp.json()
-        content = resp_json["choices"][0]["message"]["content"]
+        resp = requests.post(url, headers=headers, json=data, timeout=120)
+        logger.info(f"API响应状态码: {resp.status_code}")
         
-        logger.info(f"API返回内容前200字: {content[:200]}")
+        if resp.status_code != 200:
+            logger.error(f"API错误响应: {resp.text[:500]}")
+            raise APIError(f"API返回 {resp.status_code}: {resp.text[:200]}")
+        
+        resp_json = resp.json()
+        content = resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+        
+        logger.info(f"API返回内容长度: {len(content)} 字符")
+        if content:
+            logger.info(f"API返回前200字: {content[:200]}")
+        else:
+            logger.warning(f"API返回空内容，完整响应: {json.dumps(resp_json, ensure_ascii=False)[:500]}")
         
         if json_mode:
             return extract_json(content)
         return content
+    except requests.exceptions.Timeout:
+        logger.error("API请求超时(120秒)")
+        raise APIError("API请求超时，请稍后重试")
     except requests.exceptions.RequestException as e:
         error_msg = f"API网络请求失败: {e}"
         if hasattr(e, 'response') and e.response is not None:

@@ -318,5 +318,46 @@ def test_mineru():
     except Exception as e:
         return jsonify({'error': str(e)})
 
+@app.route('/api/debug/mimo', methods=['GET'])
+@app.route('/offercatcher/api/debug/mimo', methods=['GET'])
+def debug_mimo():
+    """测试MiMo API连通性"""
+    import requests
+    API_KEY = os.getenv("MIMO_API_KEY", "")
+    API_BASE = os.getenv("API_BASE", "https://api.xiaomimimo.com/v1")
+    MODEL = os.getenv("MODEL", "mimo-v2.5-pro")
+    
+    result = {
+        'api_key_configured': bool(API_KEY),
+        'api_key_prefix': API_KEY[:15] + '...' if API_KEY else 'None',
+        'api_base': API_BASE,
+        'model': MODEL
+    }
+    
+    try:
+        url = f"{API_BASE}/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_KEY}"
+        }
+        data = {
+            "model": MODEL,
+            "messages": [{"role": "user", "content": "Say OK"}],
+            "max_tokens": 10
+        }
+        resp = requests.post(url, headers=headers, json=data, timeout=30)
+        result['api_status_code'] = resp.status_code
+        if resp.status_code == 200:
+            result['api_response'] = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+            result['api_working'] = True
+        else:
+            result['api_error'] = resp.text[:300]
+            result['api_working'] = False
+    except Exception as e:
+        result['api_error'] = str(e)
+        result['api_working'] = False
+    
+    return jsonify(result)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
