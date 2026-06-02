@@ -298,70 +298,69 @@
             const jdText = document.getElementById('jdText').value.trim();
             if (!jdFile && !jdText) { showError('请上传JD或粘贴JD文本'); return; }
 
-            const formData = new FormData();
-            formData.append('resume', resumeFile);
-            if (jdFile) formData.append('jd_files', jdFile);
-            if (jdText) formData.append('jd_texts', jdText);
-
             document.getElementById('prepareBtn').disabled = true;
             hideError();
             document.getElementById('emptyState').style.display = 'none';
             showProgress();
 
             try {
-                addProgressStep('正在解析候选人简历...');
-                await new Promise(r => setTimeout(r, 500));
+                // Step 1: 解析简历
+                addProgressStep('正在解析候选人简历...', 'loading');
 
-                const parseResp = await fetch('/offercatcher/api/parse', { method: 'POST', body: formData });
-                if (!parseResp.ok) throw new Error('解析失败');
-                
-                const parseData = await parseResp.json();
-                if (!parseData.success) throw new Error(parseData.error || '解析失败');
+                const resumeFormData = new FormData();
+                resumeFormData.append('resume', resumeFile);
 
-                resumeData = parseData.resume;
-                const jds = parseData.jds;
-                if (jds.length > 0) jdData = jds[0];
+                const resumeResp = await fetch('/offercatcher/api/parse-resume', {
+                    method: 'POST',
+                    body: resumeFormData,
+                    signal: AbortSignal.timeout(300000)
+                });
 
-                updateLastProgress(`简历解析完成: ${resumeData.name}`, 'done');
-
-                addProgressStep('正在解析目标岗位...');
-                await new Promise(r => setTimeout(r, 500));
-                updateLastProgress(`岗位解析完成: ${jdData.company} - ${jdData.position}`, 'done');
-
-                addProgressStep('正在分析岗位要求...');
-                await new Promise(r => setTimeout(r, 500));
-                updateLastProgress('岗位分析完成', 'done');
-
-                addProgressStep('正在生成面试题库（可能需要1-2分钟）...');
-                
-                // 添加超时和重试机制
-                let interviewResp = null;
-                let retries = 0;
-                const maxRetries = 2;
-                
-                while (retries <= maxRetries) {
-                    try {
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3分钟超时
-                        
-                        interviewResp = await fetch('/offercatcher/api/interview', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ resume: resumeData, jd: jdData, match_result: {}, mode: 'shield' }),
-                            signal: controller.signal
-                        });
-                        
-                        clearTimeout(timeoutId);
-                        break; // 成功，跳出循环
-                    } catch (fetchError) {
-                        retries++;
-                        if (retries > maxRetries) {
-                            throw new Error('生成超时，请稍后重试');
-                        }
-                        updateLastProgress(`重试中 (${retries}/${maxRetries})...`, 'loading');
-                        await new Promise(r => setTimeout(r, 2000));
-                    }
+                if (!resumeResp.ok) {
+                    const err = await resumeResp.json().catch(() => ({}));
+                    throw new Error(err.error || '简历解析失败');
                 }
+
+                const resumeDataResp = await resumeResp.json();
+                if (!resumeDataResp.success) throw new Error(resumeDataResp.error || '简历解析失败');
+
+                resumeData = resumeDataResp.resume;
+                updateLastProgress(`简历解析完成: ${resumeData.name}`, 'done');
+                await new Promise(r => setTimeout(r, 300));
+
+                // Step 2: 解析JD
+                addProgressStep('正在解析目标岗位...', 'loading');
+
+                const jdFormData = new FormData();
+                if (jdFile) jdFormData.append('jd_file', jdFile);
+                if (jdText) jdFormData.append('jd_text', jdText);
+
+                const jdResp = await fetch('/offercatcher/api/parse-jd', {
+                    method: 'POST',
+                    body: jdFormData,
+                    signal: AbortSignal.timeout(180000)
+                });
+
+                if (!jdResp.ok) {
+                    const err = await jdResp.json().catch(() => ({}));
+                    throw new Error(err.error || 'JD解析失败');
+                }
+
+                const jdDataResp = await jdResp.json();
+                if (!jdDataResp.success) throw new Error(jdDataResp.error || 'JD解析失败');
+
+                jdData = jdDataResp.jd;
+                updateLastProgress(`岗位解析完成: ${jdData.company} - ${jdData.position}`, 'done');
+                await new Promise(r => setTimeout(r, 300));
+
+                // Step 3: 生成面试题库
+                addProgressStep('正在生成面试题库（可能需要1-2分钟）...', 'loading');
+
+                const interviewResp = await fetch('/offercatcher/api/interview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ resume: resumeData, jd: jdData, match_result: {}, mode: 'shield' }),
+                    signal: AbortSignal.timeout(300000)
                 });
 
                 if (!interviewResp.ok) throw new Error('生成失败');
