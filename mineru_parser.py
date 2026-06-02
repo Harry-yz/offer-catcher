@@ -112,7 +112,7 @@ class MineruParser:
             logger.error(f"文件上传失败: {e}")
             return None
     
-    def _wait_for_result(self, batch_id: str, max_wait: int = 120) -> Optional[str]:
+    def _wait_for_result(self, batch_id: str, max_wait: int = 90) -> Optional[str]:
         """等待任务完成并获取结果"""
         url = f"{self.base_url}/extract-results/batch/{batch_id}"
         headers = {
@@ -121,7 +121,10 @@ class MineruParser:
         }
         
         start_time = time.time()
+        poll_count = 0
         while time.time() - start_time < max_wait:
+            poll_count += 1
+            elapsed = int(time.time() - start_time)
             try:
                 response = requests.get(url, headers=headers, timeout=30)
                 response.raise_for_status()
@@ -136,27 +139,29 @@ class MineruParser:
                         state = extract_result.get("state")
                         
                         if state == "done":
-                            # 下载解析结果
+                            logger.info(f"MinerU解析完成，耗时{elapsed}秒")
                             return self._download_result(extract_result)
                         elif state == "failed":
-                            logger.error(f"任务失败: {extract_result}")
+                            logger.error(f"MinerU任务失败: {extract_result}")
                             return None
                         else:
-                            # 继续等待
-                            logger.info(f"任务状态: {state}")
-                            time.sleep(5)
+                            logger.info(f"MinerU轮询第{poll_count}次，状态: {state}，已等待{elapsed}秒")
+                            time.sleep(3)
                     else:
-                        logger.warning("未找到解析结果")
-                        time.sleep(5)
+                        logger.info(f"MinerU轮询第{poll_count}次，等待结果，已等待{elapsed}秒")
+                        time.sleep(3)
                 else:
-                    logger.error(f"查询任务状态失败: {result}")
+                    logger.error(f"MinerU查询失败: {result}")
                     return None
                     
+            except requests.exceptions.Timeout:
+                logger.warning(f"MinerU轮询超时，第{poll_count}次，已等待{elapsed}秒")
+                time.sleep(3)
             except Exception as e:
-                logger.error(f"查询任务状态失败: {e}")
-                time.sleep(5)
+                logger.error(f"MinerU轮询异常: {e}")
+                time.sleep(3)
         
-        logger.error("任务超时")
+        logger.error(f"MinerU任务超时，已等待{max_wait}秒")
         return None
     
     def _download_result(self, extract_result: Dict[str, Any]) -> Optional[str]:

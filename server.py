@@ -285,5 +285,38 @@ def api_mock():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/debug/mineru', methods=['GET'])
+@app.route('/offercatcher/api/debug/mineru', methods=['GET'])
+def debug_mineru():
+    """检查MinerU配置状态"""
+    from mineru_parser import is_available, MINERU_API_KEY, mineru_parser
+    return jsonify({
+        'mineru_available': is_available(),
+        'api_key_configured': bool(MINERU_API_KEY),
+        'api_key_prefix': MINERU_API_KEY[:10] + '...' if MINERU_API_KEY else 'None',
+        'base_url': mineru_parser.base_url
+    })
+
+@app.route('/api/debug/test-mineru', methods=['GET'])
+@app.route('/offercatcher/api/debug/test-mineru', methods=['GET'])
+def test_mineru():
+    """测试MinerU连通性"""
+    import requests
+    from mineru_parser import MINERU_API_KEY
+    try:
+        url = "https://mineru.net/api/v4/file-urls/batch"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {MINERU_API_KEY}"
+        }
+        data = {"files": [{"name": "test.txt"}], "model_version": "vlm"}
+        resp = requests.post(url, headers=headers, json=data, timeout=10)
+        return jsonify({
+            'status_code': resp.status_code,
+            'response': resp.text[:500]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)

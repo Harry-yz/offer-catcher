@@ -432,10 +432,10 @@
 
             try {
                 await addSequentialStep('正在解析候选人简历...', 1000);
-                addProgressStep('正在调用MinerU提取文本...', 'loading');
+                addProgressStep('正在调用MinerU提取文本（最多等待90秒）...', 'loading');
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 300000);
+                const timeoutId = setTimeout(() => controller.abort(), 120000);
 
                 const response = await fetch('/offercatcher/api/parse', {
                     method: 'POST',
@@ -746,9 +746,16 @@
             showProgress('interviewPrep');
 
             try {
-                await addSequentialStep('正在分析匹配结果...', 800);
-                await addSequentialStep('正在生成自我介绍...', 1000);
-                addProgressStep('正在生成面试题库...', 'loading');
+                const isSeeker = '{{ mode }}' === 'seeker';
+                
+                if (isSeeker) {
+                    await addSequentialStep('正在分析匹配结果...', 800);
+                    await addSequentialStep('正在生成自我介绍...', 1000);
+                    addProgressStep('正在生成面试题库...', 'loading');
+                } else {
+                    await addSequentialStep('正在分析候选人简历...', 800);
+                    addProgressStep('正在生成验证题目...', 'loading');
+                }
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 300000);
@@ -792,73 +799,107 @@
 
             const intro = interviewData.self_intro || {};
             const questions = interviewData.questions || [];
+            const isSeeker = '{{ mode }}' === 'seeker';
 
             let html = `
-                <div style="margin-bottom:2rem">
-                    <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#00ff87,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem">{{ '🛡️ 面试准备' if mode == 'seeker' else '⚔️ 验证出题' }}</h2>
+                <div style="margin-bottom:1.5rem">
+                    <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#00ff87,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem">${isSeeker ? '🛡️ 面试准备' : '⚔️ 验证出题'}</h2>
                     <p style="color:rgba(255,255,255,0.7)">${currentMatch.company} · ${currentMatch.position}</p>
-                </div>
-                <button class="btn btn-secondary" onclick="backToMatch()" style="margin-bottom:1.5rem">← 返回</button>
-                <div class="divider"></div>
-
-                <div class="tabs">
-                    <button class="tab active" onclick="switchTab(0, this)">📝 自我介绍</button>
-                    <button class="tab" onclick="switchTab(1, this)">❓ 面试题库</button>
-                </div>
-
-                <div class="tab-content active" id="tab-0">
-                    <div class="card">
-                        <div style="font-weight:600;margin-bottom:0.5rem">📄 自我介绍</div>
-                        <div style="line-height: 1.6;">${intro.formal || '暂无'}</div>
-                    </div>
-                    ${intro.key_points && intro.key_points.length > 0 ? `
-                        <div style="margin-top:1rem">
-                            <div style="font-weight:600;margin-bottom:0.5rem">🎯 关键数据点</div>
-                            ${intro.key_points.map(p => `<div class="info-box">${p}</div>`).join('')}
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="tab-content" id="tab-1">
-                    ${questions.length > 0 ? questions.map((q, i) => `
-                        <div class="question-card">
-                            <div class="question-header" onclick="toggleQuestion(this)">
-                                <span style="font-weight:600; font-size: 1.05rem; line-height: 1.4;">Q${i+1}: ${(q.question || '').substring(0, 60)}...</span>
-                                <span style="color: var(--aurora-green);">▼</span>
-                            </div>
-                            <div class="question-body">
-                                <div style="margin-bottom:1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 12px;">
-                                    <div style="font-weight:600; color: #fff; margin-bottom:0.5rem; font-size: 1.1rem;">❓ 完整问题</div>
-                                    <div style="color:var(--text-secondary); line-height: 1.5;">${q.question || ''}</div>
-                                </div>
-                                
-                                ${q.intent ? `
-                                <div style="margin-bottom:1rem; padding: 1rem; background: rgba(0,255,135,0.08); border-radius: 12px; border-left: 3px solid #00ff87;">
-                                    <div style="font-weight:600; color: #00ff87; margin-bottom:0.3rem;">🎯 面试官意图</div>
-                                    <div style="color:var(--text-secondary); line-height: 1.5;">${q.intent}</div>
-                                </div>
-                                ` : ''}
-                                
-                                <div style="margin-bottom:1rem;">
-                                    <div style="font-weight:600; color: #0066ff; margin-bottom:0.5rem;">💡 参考答案</div>
-                                    <div class="card" style="line-height: 1.6; color: var(--text-secondary);">${q.answer || '暂无'}</div>
-                                </div>
-                                
-                                ${q.follow_ups && q.follow_ups.length > 0 ? `
-                                    <div style="padding: 1rem; background: rgba(0,102,255,0.08); border-radius: 12px; border-left: 3px solid #0066ff;">
-                                        <div style="font-weight:600; color: #0066ff; margin-bottom:0.5rem;">🔄 追问预判</div>
-                                        <ul style="list-style: none; padding: 0;">
-                                            ${q.follow_ups.map((fu, j) => `<li style="padding:0.3rem 0; color:var(--text-secondary); line-height: 1.4;">• ${fu}</li>`).join('')}
-                                        </ul>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `).join('') : '<div class="warning-box">暂无面试题</div>'}
                 </div>
             `;
 
+            if (isSeeker) {
+                // 求职者模式：自我介绍 + 面试题库
+                html += `
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchTab(0, this)">📝 自我介绍</button>
+                        <button class="tab" onclick="switchTab(1, this)">❓ 面试题库</button>
+                    </div>
+
+                    <div class="tab-content active" id="tab-0">
+                        <div class="card">
+                            <div style="font-weight:600;margin-bottom:0.5rem">📄 自我介绍</div>
+                            <div style="line-height: 1.6;">${intro.formal || '暂无'}</div>
+                        </div>
+                        ${intro.key_points && intro.key_points.length > 0 ? `
+                            <div style="margin-top:1rem">
+                                <div style="font-weight:600;margin-bottom:0.5rem">🎯 关键数据点</div>
+                                ${intro.key_points.map(p => `<div class="info-box">${p}</div>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="tab-content" id="tab-1">
+                        ${renderQuestionsList(questions)}
+                    </div>
+                `;
+            } else {
+                // 面试官模式：只有面试题库，没有自我介绍
+                html += renderQuestionsList(questions);
+            }
+
+            // 面试官模式：返回按钮放在左下角
+            if (!isSeeker) {
+                html += `<div style="margin-top:2rem"><button class="btn btn-secondary" onclick="backToMatch()">← 返回</button></div>`;
+            }
+
             container.innerHTML = html;
+        }
+
+        function renderQuestionsList(questions) {
+            if (questions.length === 0) return '<div class="warning-box">暂无面试题</div>';
+
+            return questions.map((q, i) => `
+                <div class="question-card">
+                    <div class="question-header" onclick="toggleQuestion(this)">
+                        <span style="font-weight:600; font-size: 1.05rem; line-height: 1.4;">Q${i+1}: ${q.question || ''}</span>
+                        <span style="color: var(--aurora-green);">▼</span>
+                    </div>
+                    <div class="question-body">
+                        <div style="margin-bottom:1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                            <div style="font-weight:600; color: #fff; margin-bottom:0.5rem; font-size: 1.1rem;">❓ 完整问题</div>
+                            <div style="color:var(--text-secondary); line-height: 1.6;">${q.question || ''}</div>
+                        </div>
+                        
+                        ${q.intent ? `
+                        <div style="margin-bottom:1rem; padding: 1rem; background: rgba(0,255,135,0.08); border-radius: 12px; border-left: 3px solid #00ff87;">
+                            <div style="font-weight:600; color: #00ff87; margin-bottom:0.3rem;">🎯 考察意图</div>
+                            <div style="color:var(--text-secondary); line-height: 1.6;">${q.intent}</div>
+                        </div>
+                        ` : ''}
+                        
+                        <div style="margin-bottom:1rem;">
+                            <div style="font-weight:600; color: #0066ff; margin-bottom:0.5rem;">💡 参考答案</div>
+                            <div class="card" style="line-height: 1.7; color: var(--text-secondary);">${q.answer || '暂无'}</div>
+                        </div>
+                        
+                        ${q.follow_ups && q.follow_ups.length > 0 ? `
+                            <div style="padding: 1rem; background: rgba(0,102,255,0.08); border-radius: 12px; border-left: 3px solid #0066ff;">
+                                <div style="font-weight:600; color: #0066ff; margin-bottom:0.5rem;">🔄 追问预判</div>
+                                <ul style="list-style: none; padding: 0;">
+                                    ${q.follow_ups.map((fu, j) => `<li style="padding:0.3rem 0; color:var(--text-secondary); line-height: 1.5;">• ${fu}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        ${q.what_it_reveals ? `
+                            <div style="margin-top:1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 12px; border-left: 3px solid rgba(255,255,255,0.2);">
+                                <div style="font-weight:600; color: var(--text-primary); margin-bottom:0.3rem;">🔍 能揭示什么</div>
+                                <div style="color:var(--text-secondary); line-height: 1.6;">${q.what_it_reveals}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${q.red_flags && q.red_flags.length > 0 ? `
+                            <div style="margin-top:1rem; padding: 1rem; background: rgba(255,68,68,0.08); border-radius: 12px; border-left: 3px solid #ff4444;">
+                                <div style="font-weight:600; color: #ff4444; margin-bottom:0.5rem;">🚩 红旗信号</div>
+                                <ul style="list-style: none; padding: 0;">
+                                    ${q.red_flags.map((rf, j) => `<li style="padding:0.3rem 0; color:var(--text-secondary); line-height: 1.5;">• ${rf}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
         }
 
         function switchTab(idx, btn) {
